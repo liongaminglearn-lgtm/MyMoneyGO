@@ -21,14 +21,16 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang="es" style={{ colorScheme: 'light' }}>
       <head>
+        <meta name="color-scheme" content="light" />
+        <meta name="theme-color" content="#00C896" />
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="MyMoney GO" />
       </head>
-      <body>
+      <body style={{ backgroundColor: '#F0FDF9', color: '#0F172A' }}>
         {children}
       </body>
     </html>
