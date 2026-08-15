@@ -175,3 +175,54 @@ input, textarea, select {
 input:focus, textarea:focus, select:focus {
   background-color: #FFFFFF !important;
 }
+
+/* ============================================
+   OVERRIDE TAILWIND CUSTOM CLASSES — LIGHT MODE
+   Garantiza colores claros sin importar el build
+   ============================================ */
+.bg-brand-dark   { background-color: #F0FDF9 !important; }
+.bg-brand-card   { background-color: #FFFFFF !important; }
+.bg-brand-light  { background-color: #ECFDF5 !important; }
+.text-brand-muted { color: #64748B !important; }
+.text-brand-green { color: #00C896 !important; }
+.text-gray-900   { color: #0F172A !important; }
+.text-gray-700   { color: #374151 !important; }
+.text-gray-600   { color: #4B5563 !important; }
+.text-gray-500   { color: #6B7280 !important; }
+
+/* Tarjeta / card */
+.card {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* ============================================
+   DARK MODE MEDIA QUERY — ANULAR COMPLETAMENTE
+   Si el dispositivo está en dark mode, igual
+   forzamos nuestra paleta clara
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+  }
+  html, body {
+    background-color: #F0FDF9 !important;
+    color: #0F172A !important;
+  }
+  .bg-brand-dark   { background-color: #F0FDF9 !important; }
+  .bg-brand-card   { background-color: #FFFFFF !important; }
+  .card            { background-color: #FFFFFF !important; color: #0F172A !important; }
+  .text-gray-900   { color: #0F172A !important; }
+  .text-gray-700   { color: #374151 !important; }
+  .text-gray-600   { color: #4B5563 !important; }
+  .text-gray-500   { color: #6B7280 !important; }
+  .text-brand-muted { color: #64748B !important; }
+  input, textarea, select {
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
+    border-color: #E2E8F0 !important;
+  }
+  input:focus, textarea:focus, select:focus {
+    background-color: #FFFFFF !important;
+  }
+}
