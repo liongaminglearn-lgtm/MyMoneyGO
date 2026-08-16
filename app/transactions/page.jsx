@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getUser, getTransactions, addTransaction, deleteTransaction, updateProfile, getProfile } from '@/lib/supabase'
 import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { X, Trash2, Plus, TrendingUp, TrendingDown } from 'lucide-react'
+import { X, Trash2, Plus, TrendingUp, TrendingDown, Download } from 'lucide-react'
 
 // Donut chart SVG simple
 function DonutChart({ data, total }) {
@@ -123,6 +123,33 @@ function TransactionsContent() {
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
+  function exportCSV() {
+    const CAT_LABELS_FULL = {
+      housing: 'Vivienda', food: 'Comida', transport: 'Transporte',
+      health: 'Salud', entertainment: 'Entretenimiento', education: 'Educación',
+      savings: 'Ahorro', salary: 'Salario', freelance: 'Freelance',
+      other: 'Otros', debt: 'Deudas', clothing: 'Ropa', utilities: 'Servicios',
+    }
+    const rows = [
+      ['Fecha', 'Tipo', 'Categoría', 'Monto', 'Nota'],
+      ...transactions.map(t => [
+        t.date,
+        t.type === 'income' ? 'Ingreso' : 'Gasto',
+        CAT_LABELS_FULL[t.category] || t.category,
+        t.amount,
+        t.note || '',
+      ])
+    ]
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mymoneygo-${currentMonth}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const expenses = transactions.filter(t => t.type === 'expense')
   const income   = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const totalExp = expenses.reduce((s, t) => s + t.amount, 0)
@@ -166,12 +193,20 @@ function TransactionsContent() {
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>Gastos</h1>
             <p style={{ fontSize: 13, color: '#6B7280' }}>{monthLabel}</p>
           </div>
-          <button onClick={() => { setShowForm(true); setType('expense') }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm"
-            style={{ background: '#22C55E', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(34,197,94,0.35)' }}>
-            <Plus size={16} />
-            Agregar
-          </button>
+          <div className="flex gap-2">
+            <button onClick={exportCSV}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm"
+              style={{ background: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB' }}>
+              <Download size={15} />
+              Excel
+            </button>
+            <button onClick={() => { setShowForm(true); setType('expense') }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm"
+              style={{ background: '#22C55E', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(34,197,94,0.35)' }}>
+              <Plus size={16} />
+              Agregar
+            </button>
+          </div>
         </div>
 
         {/* Summary */}

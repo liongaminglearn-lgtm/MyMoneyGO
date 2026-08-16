@@ -77,7 +77,7 @@ export default function DashboardPage() {
     <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
 
       {/* ── Header con gradiente verde ── */}
-      <div style={{ background: 'linear-gradient(145deg, #16A34A 0%, #14532D 100%)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
+      <div style={{ background: 'linear-gradient(145deg, #15803D 0%, #052E16 100%)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
         <div className="px-5 pt-2 pb-20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
