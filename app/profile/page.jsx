@@ -1,29 +1,47 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUser, getProfile, updateProfile, signOut } from '@/lib/supabase'
-import { calculateLevel, getLevelProgress, formatCurrency } from '@/lib/utils'
-import BottomNav from '@/components/ui/BottomNav'
-import { LogOut, User, Flame, Trophy, Zap, DollarSign, CheckCircle2, Receipt, Sword } from 'lucide-react'
 import Link from 'next/link'
+import { getUser, getProfile, updateProfile, signOut, getTransactions } from '@/lib/supabase'
+import { calculateLevel, getLevelProgress, formatCurrency, getCurrentMonth } from '@/lib/utils'
+import BottomNav from '@/components/ui/BottomNav'
+import CompanionAvatar, { COMPANIONS } from '@/components/ui/CompanionAvatar'
+import { LogOut, CheckCircle2, ChevronRight, Edit3, X, Check } from 'lucide-react'
+
+const BADGES = [
+  { icon: '🌱', name: 'Primer paso',    xpReq: 0,   earned: true },
+  { icon: '💸', name: 'Primer gasto',   xpReq: 10,  earned: false },
+  { icon: '🔥', name: 'En racha',       streak: 3,  earned: false },
+  { icon: '🏔️', name: 'Escalador',      xpReq: 100, earned: false },
+  { icon: '⚡', name: 'Misión cumplida', xpReq: 50,  earned: false },
+  { icon: '💰', name: 'Ahorrador',      xpReq: 200, earned: false },
+  { icon: '🐉', name: 'Caza-dragones',  xpReq: 500, earned: false },
+  { icon: '👑', name: 'Maestro',        xpReq: 1000, earned: false },
+  { icon: '🎯', name: 'Meta lograda',   xpReq: 300, earned: false },
+]
 
 export default function ProfilePage() {
   const router = useRouter()
   const [profile, setProfile] = useState(null)
+  const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
+  const [editingSalary, setEditingSalary] = useState(false)
   const [salary, setSalary] = useState('')
   const [savingSalary, setSavingSalary] = useState(false)
-  const [salarySaved, setSalarySaved] = useState(false)
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
       setUserId(u.id)
-      const { data } = await getProfile(u.id)
-      setProfile(data)
-      setSalary(data?.monthly_income ? String(data.monthly_income) : '')
+      const [{ data: prof }, { data: txns }] = await Promise.all([
+        getProfile(u.id),
+        getTransactions(u.id, getCurrentMonth()),
+      ])
+      setProfile(prof)
+      setTransactions(txns || [])
+      setSalary(prof?.monthly_income ? String(prof.monthly_income) : '')
       setLoading(false)
     }
     load()
@@ -34,152 +52,197 @@ export default function ProfilePage() {
     router.push('/auth/login')
   }
 
-  async function handleSaveSalary(e) {
-    e.preventDefault()
+  async function handleSaveSalary() {
     if (!salary || isNaN(salary)) return
     setSavingSalary(true)
     await updateProfile(userId, { monthly_income: Number(salary) })
     setProfile(prev => prev ? { ...prev, monthly_income: Number(salary) } : prev)
     setSavingSalary(false)
-    setSalarySaved(true)
-    setTimeout(() => setSalarySaved(false), 3000)
+    setEditingSalary(false)
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-      <p className="text-brand-green font-black animate-pulse">Cargando tu perfil de héroe...</p>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
+      <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando perfil...</p>
     </div>
   )
 
   const levelInfo = calculateLevel(profile?.xp || 0)
-  const progress = getLevelProgress(profile?.xp || 0)
+  const progress  = getLevelProgress(profile?.xp || 0)
+  const companionId = profile?.companion_id || 'nova'
+  const companion = COMPANIONS[companionId] || COMPANIONS.nova
 
-  const BADGES = [
-    { icon: '🌱', name: 'Primer paso', desc: 'Completaste el onboarding', earned: true },
-    { icon: '💸', name: 'Primer gasto', desc: 'Registraste tu primera transacción', earned: (profile?.xp || 0) >= 10 },
-    { icon: '🔥', name: 'En racha', desc: '3 días seguidos activo', earned: (profile?.streak || 0) >= 3 },
-    { icon: '🎯', name: 'Meta creada', desc: 'Creaste tu primera meta', earned: false },
-    { icon: '⚡', name: 'Misión cumplida', desc: 'Completaste una misión', earned: false },
-    { icon: '💰', name: 'Ahorrador', desc: 'Nivel 2 alcanzado', earned: levelInfo.level >= 2 },
-  ]
+  const xp = profile?.xp || 0
+  const streak = profile?.streak || 0
+  const earnedBadges = BADGES.map(b => ({
+    ...b,
+    earned: b.earned || (b.xpReq !== undefined && xp >= b.xpReq) || (b.streak !== undefined && streak >= b.streak),
+  }))
+
+  const totalIncome  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const daysInMonth  = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+  const today        = new Date().getDate()
+  const avgDaily     = today > 0 ? totalExpense / today : 0
 
   return (
-    <div className="min-h-screen bg-brand-dark pb-24 safe-top page-transition">
-      <div className="px-5 pt-6">
-        {/* Profile header */}
-        <div className="card text-center mb-5"
-          style={{ background: 'linear-gradient(135deg, #F8FAFC, #F1F5F9)' }}>
-          <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3"
-            style={{ background: 'rgba(0,200,150,0.1)', border: '2px solid rgba(0,200,150,0.3)' }}>
-            {levelInfo.level >= 5 ? '👑' : levelInfo.level >= 4 ? '🥇' : levelInfo.level >= 3 ? '🥈' : levelInfo.level >= 2 ? '🥉' : '🌱'}
-          </div>
-          <h2 className="text-gray-900 text-xl font-black">{profile?.name}</h2>
-          <p className="text-brand-green text-sm font-semibold mt-0.5">{levelInfo.name}</p>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
 
-          {/* XP Progress */}
+      {/* Hero header */}
+      <div style={{ background: 'linear-gradient(145deg, #8B5CF6, #6D28D9)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
+        <div className="px-5 pt-2 pb-20">
+          <div className="flex items-center justify-between">
+            <h1 style={{ fontSize: 20, fontWeight: 900, color: '#FFFFFF' }}>Mi Perfil</h1>
+            <button onClick={handleSignOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
+              style={{ background: 'rgba(255,255,255,0.2)', color: '#FFFFFF' }}>
+              <LogOut size={14} />
+              Salir
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 -mt-14 space-y-4">
+
+        {/* Profile card */}
+        <div className="card-lg text-center" style={{ border: '2px solid #EDE9FE' }}>
+          <div className="flex justify-center mb-3">
+            <CompanionAvatar companionId={companionId} size={72} showGlow />
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{profile?.name}</h2>
+          <p style={{ fontSize: 14, color: companion.color, fontWeight: 600, marginTop: 2 }}>
+            {companion.name} · {companion.specialty}
+          </p>
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-brand-muted mb-1.5">
-              <span>Nivel {levelInfo.level}</span>
-              <span>{profile?.xp || 0} XP {levelInfo.next ? `/ ${levelInfo.next}` : '(Máximo)'}</span>
+            <div className="flex justify-between text-sm mb-2">
+              <span style={{ color: '#6B7280', fontWeight: 500 }}>⚡ Nivel {levelInfo.level} · {levelInfo.name}</span>
+              <span style={{ color: '#9CA3AF' }}>{xp} XP</span>
             </div>
-            <div className="h-2 rounded-full" style={{ background: '#E2E8F0' }}>
-              <div className="h-2 rounded-full transition-all"
-                style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #00C896, #00E5B0)' }} />
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #8B5CF6, #7C3AED)' }} />
             </div>
+            {levelInfo.next && (
+              <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, textAlign: 'right' }}>
+                {levelInfo.next - xp} XP para nivel {levelInfo.level + 1}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: <Flame size={20} color="#F97316" />, value: profile?.streak || 0, label: 'Racha' },
-            { icon: <Zap size={20} color="#EAB308" />, value: profile?.xp || 0, label: 'XP Total' },
-            { icon: <Trophy size={20} color="#8B5CF6" />, value: levelInfo.level, label: 'Nivel' },
-          ].map((stat, i) => (
+            { icon: '💎', value: profile?.gems || 0,   label: 'Gemas',   color: '#6366F1' },
+            { icon: '🪙', value: profile?.coins || 0,  label: 'Monedas', color: '#D97706' },
+            { icon: '🔥', value: profile?.streak || 0, label: 'Racha',   color: '#F97316' },
+          ].map((s, i) => (
             <div key={i} className="card text-center py-3">
-              <div className="flex justify-center mb-1">{stat.icon}</div>
-              <p className="text-gray-900 font-black text-lg">{stat.value}</p>
-              <p className="text-brand-muted text-xs">{stat.label}</p>
+              <p style={{ fontSize: 24 }}>{s.icon}</p>
+              <p style={{ fontWeight: 900, fontSize: 20, color: s.color }}>{s.value}</p>
+              <p style={{ fontSize: 11, color: '#6B7280' }}>{s.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Salary / Monthly Income */}
-        <div className="card mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <DollarSign size={18} color="#00C896" />
-            <h2 className="text-gray-900 font-bold">Ingreso mensual</h2>
+        {/* Ingreso mensual */}
+        <div className="card-lg">
+          <div className="flex items-center justify-between mb-3">
+            <p style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>💰 Ingreso mensual</p>
+            {!editingSalary ? (
+              <button onClick={() => setEditingSalary(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: '#F3F4F6', color: '#374151' }}>
+                <Edit3 size={12} /> Editar
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => setEditingSalary(false)}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: '#FEE2E2' }}>
+                  <X size={14} color="#DC2626" />
+                </button>
+                <button onClick={handleSaveSalary} disabled={savingSalary}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: '#DCFCE7' }}>
+                  <Check size={14} color="#16A34A" />
+                </button>
+              </div>
+            )}
           </div>
-          <p className="text-brand-muted text-xs mb-3">
-            Guarda tu salario para calcular mejor tu presupuesto
-          </p>
-          <form onSubmit={handleSaveSalary} className="flex gap-2">
+          {editingSalary ? (
             <input
-              className="input-dark flex-1"
+              className="input-field"
               type="number"
-              placeholder="Ej: 2000"
+              placeholder="Ej: 3500"
               value={salary}
               onChange={e => setSalary(e.target.value)}
               inputMode="decimal"
             />
-            <button
-              type="submit"
-              disabled={savingSalary}
-              className="px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-1.5 transition-all"
-              style={{
-                background: salarySaved ? 'rgba(0,200,150,0.12)' : '#00C896',
-                color: salarySaved ? '#00C896' : '#FFFFFF',
-                minWidth: 90,
-              }}>
-              {savingSalary ? 'Guardando...' : salarySaved ? (
-                <><CheckCircle2 size={16} /> ¡Listo!</>
-              ) : 'Guardar'}
-            </button>
-          </form>
-          {profile?.monthly_income > 0 && (
-            <p className="text-brand-muted text-xs mt-2">
-              Ingreso actual: <span className="text-brand-green font-semibold">{formatCurrency(profile.monthly_income)}</span>
+          ) : (
+            <p style={{ fontSize: 24, fontWeight: 900, color: '#22C55E' }}>
+              {profile?.monthly_income ? formatCurrency(profile.monthly_income) : '—'}
             </p>
           )}
         </div>
 
-        {/* Badges */}
-        <h2 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-          <Trophy size={16} color="#EAB308" /> Logros
-        </h2>
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {BADGES.map((badge, i) => (
-            <div key={i} className="card text-center py-3"
-              style={{ opacity: badge.earned ? 1 : 0.4 }}>
-              <div className="text-2xl mb-1">{badge.icon}</div>
-              <p className="text-gray-800 text-xs font-semibold leading-tight">{badge.name}</p>
+        {/* Compañero */}
+        <Link href="/companions">
+          <div className="card-lg flex items-center gap-4" style={{ border: `1.5px solid ${companion.color}30` }}>
+            <CompanionAvatar companionId={companionId} size={52} showGlow />
+            <div className="flex-1">
+              <p style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Mi compañero: {companion.name}</p>
+              <p style={{ fontSize: 12, color: companion.color, fontWeight: 600 }}>{companion.specialty}</p>
+              <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{companion.desc}</p>
             </div>
-          ))}
+            <ChevronRight size={18} color="#9CA3AF" />
+          </div>
+        </Link>
+
+        {/* Badges */}
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 12 }}>🏆 Logros</p>
+          <div className="grid grid-cols-3 gap-3">
+            {earnedBadges.map((badge, i) => (
+              <div key={i} className="card text-center py-3" style={{ opacity: badge.earned ? 1 : 0.35 }}>
+                <p style={{ fontSize: 26, marginBottom: 4 }}>{badge.icon}</p>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#374151', lineHeight: 1.3 }}>{badge.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Quick links */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <Link href="/bills"
-            className="card flex items-center gap-3 active:scale-95 transition-transform">
-            <Receipt size={18} color="#6366F1" />
-            <span className="text-gray-800 font-semibold text-sm">Facturas</span>
-          </Link>
-          <Link href="/missions"
-            className="card flex items-center gap-3 active:scale-95 transition-transform">
-            <Sword size={18} color="#7C3AED" />
-            <span className="text-gray-800 font-semibold text-sm">Misiones</span>
-          </Link>
+        {/* Estadísticas del mes */}
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 12 }}>📊 Estadísticas del mes</p>
+          <div className="card-lg space-y-4">
+            {[
+              { label: 'Ingresos registrados', value: formatCurrency(totalIncome), color: '#16A34A' },
+              { label: 'Gastos registrados',   value: formatCurrency(totalExpense), color: '#DC2626' },
+              { label: 'Gasto promedio diario', value: formatCurrency(avgDaily),   color: '#D97706' },
+              { label: 'Balance del mes',       value: formatCurrency(totalIncome - totalExpense), color: totalIncome >= totalExpense ? '#16A34A' : '#DC2626' },
+            ].map((s, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <p style={{ fontSize: 14, color: '#374151' }}>{s.label}</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: s.color }}>{s.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Sign out */}
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm transition-all"
-          style={{ background: 'rgba(239,68,68,0.06)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.15)' }}>
-          <LogOut size={16} />
-          Cerrar sesión
-        </button>
+        {/* Links */}
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/budget" className="card flex items-center gap-3">
+            <span style={{ fontSize: 22 }}>📊</span>
+            <span style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>Presupuesto</span>
+          </Link>
+          <Link href="/debt-dungeon" className="card flex items-center gap-3">
+            <span style={{ fontSize: 22 }}>🐉</span>
+            <span style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>Debt Dungeon</span>
+          </Link>
+        </div>
       </div>
+
       <BottomNav />
     </div>
   )

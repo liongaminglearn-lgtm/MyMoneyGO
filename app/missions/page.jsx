@@ -1,146 +1,197 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUser, getMissions, completeMission, getProfile } from '@/lib/supabase'
-import { calculateLevel } from '@/lib/utils'
+import Link from 'next/link'
+import { getUser, getProfile } from '@/lib/supabase'
+import { formatCurrency } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import XPBar from '@/components/ui/XPBar'
-import { Zap, CheckCircle2 } from 'lucide-react'
+import { ChevronLeft, CheckCircle2, Lock } from 'lucide-react'
+
+const DAILY_MISSIONS = [
+  { id: 'm1', icon: '💳', title: 'Registra un gasto hoy', desc: 'Anota cualquier gasto del día', xp: 15, coins: 5, type: 'daily' },
+  { id: 'm2', icon: '📊', title: 'Revisa tu presupuesto', desc: 'Visita la sección de presupuesto', xp: 10, coins: 3, type: 'daily' },
+  { id: 'm3', icon: '🎯', title: 'Actualiza una meta', desc: 'Agrega ahorro a una de tus metas', xp: 25, coins: 10, type: 'daily' },
+]
+
+const WEEKLY_MISSIONS = [
+  { id: 'w1', icon: '⚔️', title: 'Ataca una deuda', desc: 'Haz un pago a cualquier deuda', xp: 50, coins: 20, type: 'weekly' },
+  { id: 'w2', icon: '📈', title: 'Semana en verde', desc: 'Gasta menos de lo que ingresaste', xp: 75, coins: 30, type: 'weekly' },
+  { id: 'w3', icon: '🔥', title: 'Racha de 7 días', desc: 'Mantén tu racha toda la semana', xp: 100, coins: 50, type: 'weekly' },
+]
+
+const SPECIAL_MISSIONS = [
+  { id: 's1', icon: '🏔️', title: 'Primer pico', desc: 'Completa el 50% de una meta de ahorro', xp: 200, coins: 100, type: 'special', locked: false },
+  { id: 's2', icon: '🐉', title: 'Caza-dragones', desc: 'Paga completamente una deuda', xp: 500, coins: 250, type: 'special', locked: false },
+  { id: 's3', icon: '👑', title: 'Maestro financiero', desc: 'Llega al Nivel 10', xp: 1000, coins: 500, type: 'special', locked: true },
+]
 
 export default function MissionsPage() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
-  const [missions, setMissions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('daily')
+  const [completed, setCompleted] = useState({})
+  const [xpFlash, setXpFlash] = useState('')
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      setUser(u)
-      const [{ data: prof }, { data: miss }] = await Promise.all([
-        getProfile(u.id),
-        getMissions(u.id),
-      ])
-      setProfile(prof)
-      setMissions(miss || [])
+      const { data } = await getProfile(u.id)
+      setProfile(data)
       setLoading(false)
     }
     load()
   }, [router])
 
   async function handleComplete(mission) {
-    if (mission.completed) return
-    await completeMission(mission.id, user.id, mission.xp_reward)
-    setMissions(prev => prev.map(m => m.id === mission.id ? { ...m, completed: true } : m))
-    setProfile(prev => prev ? { ...prev, xp: (prev.xp || 0) + mission.xp_reward } : prev)
+    if (completed[mission.id] || mission.locked) return
+    setCompleted(prev => ({ ...prev, [mission.id]: true }))
+    setXpFlash(`+${mission.xp} XP`)
+    setTimeout(() => setXpFlash(''), 1400)
   }
 
-  const daily = missions.filter(m => m.type === 'daily')
-  const weekly = missions.filter(m => m.type === 'weekly')
-  const levelInfo = calculateLevel(profile?.xp || 0)
+  const missionGroups = { daily: DAILY_MISSIONS, weekly: WEEKLY_MISSIONS, special: SPECIAL_MISSIONS }
+  const currentMissions = missionGroups[activeTab] || []
+  const completedCount = currentMissions.filter(m => completed[m.id]).length
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
+      <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando misiones...</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-brand-dark pb-24 safe-top page-transition">
-      <div className="px-5 pt-6">
-        <h1 className="text-gray-900 text-xl font-black mb-1">Misiones 🎮</h1>
-        <p className="text-brand-muted text-sm mb-5">Completa misiones y gana XP</p>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
 
-        {profile && <div className="mb-5"><XPBar xp={profile.xp || 0} /></div>}
-
-        {/* Level badge */}
-        <div className="card flex items-center gap-4 mb-5"
-          style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.06), rgba(234,179,8,0.02))', borderColor: 'rgba(234,179,8,0.2)' }}>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-            style={{ background: 'rgba(234,179,8,0.1)' }}>
-            {levelInfo.level >= 5 ? '👑' : levelInfo.level >= 4 ? '🥇' : levelInfo.level >= 3 ? '🥈' : levelInfo.level >= 2 ? '🥉' : '🌱'}
+      {/* Header */}
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
+        <div className="px-5 pt-14 pb-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Link href="/dashboard">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                <ChevronLeft size={20} color="#374151" />
+              </div>
+            </Link>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>Misiones</h1>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>Completa misiones y gana XP</p>
+            </div>
           </div>
-          <div>
-            <p className="text-yellow-600 font-bold">{levelInfo.name}</p>
-            <p className="text-brand-muted text-xs">Nivel {levelInfo.level} · {profile?.xp || 0} XP total</p>
+
+          {/* Stats bar */}
+          <div className="flex gap-3">
+            <div className="flex-1 rounded-xl p-2.5 text-center" style={{ background: '#EDE9FE' }}>
+              <p style={{ fontSize: 18, fontWeight: 900, color: '#7C3AED' }}>⚡ {profile?.xp || 0}</p>
+              <p style={{ fontSize: 10, color: '#6D28D9', fontWeight: 600 }}>XP TOTAL</p>
+            </div>
+            <div className="flex-1 rounded-xl p-2.5 text-center" style={{ background: '#FFFBEB' }}>
+              <p style={{ fontSize: 18, fontWeight: 900, color: '#D97706' }}>🪙 {profile?.coins || 0}</p>
+              <p style={{ fontSize: 10, color: '#92400E', fontWeight: 600 }}>MONEDAS</p>
+            </div>
+            <div className="flex-1 rounded-xl p-2.5 text-center" style={{ background: '#FFF7ED' }}>
+              <p style={{ fontSize: 18, fontWeight: 900, color: '#EA580C' }}>🔥 {profile?.streak || 0}</p>
+              <p style={{ fontSize: 10, color: '#9A3412', fontWeight: 600 }}>RACHA</p>
+            </div>
           </div>
         </div>
 
-        {loading ? (
-          <p className="text-brand-muted text-center py-10">Cargando misiones...</p>
-        ) : (
-          <>
-            {daily.length > 0 && (
-              <div className="mb-5">
-                <h2 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-                  <Zap size={16} color="#EAB308" />
-                  Misiones del día
-                </h2>
-                <div className="space-y-3">
-                  {daily.map(mission => (
-                    <MissionCard key={mission.id} mission={mission} onComplete={handleComplete} />
-                  ))}
+        {/* Tabs */}
+        <div className="flex px-5 pb-0 gap-0">
+          {[
+            { id: 'daily',   label: 'Diarias' },
+            { id: 'weekly',  label: 'Semanales' },
+            { id: 'special', label: 'Especiales' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="flex-1 py-3 text-sm font-bold transition-all"
+              style={{
+                color: activeTab === tab.id ? '#22C55E' : '#6B7280',
+                borderBottom: activeTab === tab.id ? '2.5px solid #22C55E' : '2px solid transparent',
+              }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="px-5 mt-5 space-y-3">
+        {/* Progress */}
+        {completedCount > 0 && (
+          <div className="card flex items-center gap-3" style={{ background: '#F0FDF4', border: '1.5px solid #DCFCE7' }}>
+            <span style={{ fontSize: 24 }}>✅</span>
+            <div>
+              <p style={{ fontWeight: 700, color: '#16A34A', fontSize: 14 }}>
+                {completedCount}/{currentMissions.length} misiones completadas
+              </p>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>¡Sigue así, campeón!</p>
+            </div>
+          </div>
+        )}
+
+        {currentMissions.map(mission => {
+          const isDone = completed[mission.id]
+          const isLocked = mission.locked
+
+          return (
+            <div key={mission.id} className="card-lg"
+              style={{ opacity: isLocked ? 0.6 : 1, border: isDone ? '1.5px solid #DCFCE7' : '1.5px solid #F3F4F6' }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background: isDone ? '#DCFCE7' : '#F3F4F6' }}>
+                  {mission.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>{mission.title}</p>
+                      <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{mission.desc}</p>
+                    </div>
+                    {isLocked ? (
+                      <Lock size={18} color="#9CA3AF" />
+                    ) : isDone ? (
+                      <CheckCircle2 size={22} color="#22C55E" />
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="chip chip-purple">⚡ +{mission.xp} XP</span>
+                    <span className="chip chip-yellow">🪙 +{mission.coins}</span>
+                    {!isDone && !isLocked && (
+                      <button
+                        onClick={() => handleComplete(mission)}
+                        className="ml-auto px-4 py-1.5 rounded-xl text-xs font-bold"
+                        style={{ background: '#22C55E', color: '#FFFFFF' }}>
+                        Completar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
+          )
+        })}
 
-            {weekly.length > 0 && (
-              <div className="mb-5">
-                <h2 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-                  <Zap size={16} color="#8B5CF6" />
-                  Retos semanales
-                </h2>
-                <div className="space-y-3">
-                  {weekly.map(mission => (
-                    <MissionCard key={mission.id} mission={mission} onComplete={handleComplete} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {missions.length === 0 && (
-              <div className="card text-center py-12">
-                <Zap size={40} color="#9CA3AF" className="mx-auto mb-3" />
-                <p className="text-gray-800 font-semibold">Sin misiones activas</p>
-                <p className="text-brand-muted text-sm mt-1">
-                  Completa el onboarding para recibir tus primeras misiones
-                </p>
-              </div>
-            )}
-          </>
+        {activeTab === 'daily' && (
+          <div className="text-center py-4">
+            <p style={{ fontSize: 13, color: '#9CA3AF' }}>
+              🕐 Nuevas misiones diarias a las 00:00
+            </p>
+          </div>
+        )}
+        {activeTab === 'weekly' && (
+          <div className="text-center py-4">
+            <p style={{ fontSize: 13, color: '#9CA3AF' }}>
+              🕐 Nuevas misiones semanales cada lunes
+            </p>
+          </div>
         )}
       </div>
+
+      {xpFlash && <div className="xp-float">{xpFlash} ¡Misión!</div>}
       <BottomNav />
     </div>
-  )
-}
-
-function MissionCard({ mission, onComplete }) {
-  return (
-    <button
-      onClick={() => onComplete(mission)}
-      disabled={mission.completed}
-      className="card w-full text-left flex items-center gap-4 transition-all active:scale-98"
-      style={{
-        opacity: mission.completed ? 0.8 : 1,
-        borderColor: mission.completed ? 'rgba(0,200,150,0.3)' : '#E2E8F0',
-        background: mission.completed ? 'rgba(0,200,150,0.04)' : '#FFFFFF',
-      }}>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: mission.completed ? 'rgba(0,200,150,0.12)' : '#F8FAFC' }}>
-        {mission.completed
-          ? <CheckCircle2 size={22} color="#00C896" />
-          : <Zap size={22} color="#EAB308" />}
-      </div>
-      <div className="flex-1">
-        <p className="text-gray-900 font-semibold text-sm">{mission.title}</p>
-        <p className="text-brand-muted text-xs mt-0.5">{mission.description}</p>
-      </div>
-      <div className="flex flex-col items-end gap-1">
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(234,179,8,0.1)', color: '#CA8A04' }}>
-          +{mission.xp_reward} XP
-        </span>
-        {mission.completed && (
-          <span className="text-xs text-brand-green font-medium">✓ Hecho</span>
-        )}
-      </div>
-    </button>
   )
 }

@@ -19,11 +19,11 @@ export default function Home() {
   }, [router])
 
   return (
-    <div className="min-h-screen bg-brand-dark flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
       <div className="text-center">
-        <div className="text-5xl font-black text-brand-green mb-2">$</div>
-        <div className="text-2xl font-black text-gray-900">MyMoney <span className="text-brand-green">GO</span></div>
-        <p className="text-brand-muted text-sm mt-2">Cargando...</p>
+        <div className="text-5xl mb-3 animate-bounce">🎮</div>
+        <div className="text-2xl font-black" style={{ color: '#111827' }}>MyMoney <span style={{ color: '#22C55E' }}>GO</span></div>
+        <p style={{ color: '#6B7280', fontSize: 14, marginTop: 8 }} className="animate-pulse">Cargando tu aventura...</p>
       </div>
     </div>
   )

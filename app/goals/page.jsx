@@ -1,35 +1,87 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUser, getGoals, addGoal, updateGoal } from '@/lib/supabase'
+import Link from 'next/link'
+import { getUser, getGoals, addGoal, updateGoal, deleteGoal, getProfile, updateProfile } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { X, Target, Plus } from 'lucide-react'
+import { ChevronLeft, Plus, X, Mountain, Trash2, Sword } from 'lucide-react'
+
+// Mountain SVG visual
+function MountainVisual({ pct }) {
+  return (
+    <svg viewBox="0 0 260 120" style={{ width: '100%', maxWidth: 260, height: 120 }}>
+      {/* Sky gradient */}
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#DBEAFE" />
+          <stop offset="100%" stopColor="#EFF6FF" />
+        </linearGradient>
+        <linearGradient id="mountain" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#9CA3AF" />
+          <stop offset="100%" stopColor="#D1D5DB" />
+        </linearGradient>
+        <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F3F4F6" />
+        </linearGradient>
+        <linearGradient id="progress-green" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#22C55E" />
+          <stop offset="100%" stopColor="#16A34A" />
+        </linearGradient>
+      </defs>
+      <rect width="260" height="120" fill="url(#sky)" />
+      {/* Main mountain */}
+      <polygon points="130,8 30,110 230,110" fill="url(#mountain)" />
+      {/* Snow cap */}
+      <polygon points="130,8 100,45 160,45" fill="url(#snow)" />
+      {/* Ground */}
+      <rect x="0" y="108" width="260" height="12" fill="#DCFCE7" rx="4"/>
+      {/* Progress path */}
+      {pct > 0 && (
+        <line x1="130" y1="110" x2={130 - (100 * Math.min(pct, 1))} y2={110 - (102 * Math.min(pct, 1))}
+          stroke="url(#progress-green)" strokeWidth="3" strokeLinecap="round" strokeDasharray="4 3" />
+      )}
+      {/* Character at progress point */}
+      <text
+        x={130 - (100 * Math.min(pct, 0.98)) + (pct > 0 ? -5 : 0)}
+        y={110 - (102 * Math.min(pct, 0.98)) + 4}
+        fontSize="14" textAnchor="middle">
+        🧗
+      </text>
+      {/* Flag at top */}
+      <text x="130" y="18" fontSize="12" textAnchor="middle">🚩</text>
+    </svg>
+  )
+}
 
 export default function GoalsPage() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [goals, setGoals] = useState([])
+  const [selectedGoal, setSelectedGoal] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [showAdd, setShowAdd] = useState(null)
+  const [showDeposit, setShowDeposit] = useState(false)
+  const [depositAmt, setDepositAmt] = useState('')
+  const [savingDeposit, setSavingDeposit] = useState(false)
+  const [xpFlash, setXpFlash] = useState(false)
 
   const [name, setName] = useState('')
-  const [target, setTarget] = useState('')
   const [emoji, setEmoji] = useState('🎯')
+  const [targetAmount, setTargetAmount] = useState('')
   const [deadline, setDeadline] = useState('')
-  const [addAmount, setAddAmount] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  const EMOJIS = ['🎯', '🏠', '✈️', '🚗', '📱', '💻', '👶', '🎓', '💍', '🏖️', '🏋️', '💰']
+  const [savingGoal, setSavingGoal] = useState(false)
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      setUser(u)
+      setUserId(u.id)
       const { data } = await getGoals(u.id)
-      setGoals(data || [])
+      const gs = data || []
+      setGoals(gs)
+      if (gs.length > 0) setSelectedGoal(gs[0])
       setLoading(false)
     }
     load()
@@ -37,215 +89,264 @@ export default function GoalsPage() {
 
   async function handleAddGoal(e) {
     e.preventDefault()
-    setSaving(true)
+    if (!name || !targetAmount) return
+    setSavingGoal(true)
     const { data } = await addGoal({
-      user_id: user.id,
-      name,
-      emoji,
-      target_amount: Number(target),
+      user_id: userId,
+      name, emoji,
+      target_amount: Number(targetAmount),
       current_amount: 0,
       deadline: deadline || null,
     })
-    if (data) {
-      setGoals(prev => [data[0], ...prev])
-      setName(''); setTarget(''); setDeadline(''); setEmoji('🎯')
+    if (data && data[0]) {
+      const newGoals = [data[0], ...goals]
+      setGoals(newGoals)
+      setSelectedGoal(data[0])
+      setName(''); setEmoji('🎯'); setTargetAmount(''); setDeadline('')
       setShowForm(false)
     }
-    setSaving(false)
+    setSavingGoal(false)
   }
 
-  async function handleAddAmount(goalId) {
-    if (!addAmount || isNaN(addAmount)) return
-    const goal = goals.find(g => g.id === goalId)
-    const newAmount = (goal.current_amount || 0) + Number(addAmount)
-    const { data } = await updateGoal(goalId, { current_amount: newAmount })
-    if (data) {
-      setGoals(prev => prev.map(g => g.id === goalId ? { ...g, current_amount: newAmount } : g))
-      setAddAmount('')
-      setShowAdd(null)
+  async function handleDeposit() {
+    if (!depositAmt || !selectedGoal) return
+    setSavingDeposit(true)
+    const newAmount = (selectedGoal.current_amount || 0) + Number(depositAmt)
+    const { data } = await updateGoal(selectedGoal.id, { current_amount: newAmount })
+    if (data && data[0]) {
+      const updated = data[0]
+      setGoals(prev => prev.map(g => g.id === updated.id ? updated : g))
+      setSelectedGoal(updated)
+      const { data: profile } = await getProfile(userId)
+      if (profile) await updateProfile(userId, { xp: (profile.xp || 0) + 25 })
+      setXpFlash(true)
+      setTimeout(() => setXpFlash(false), 1400)
     }
+    setDepositAmt('')
+    setShowDeposit(false)
+    setSavingDeposit(false)
   }
+
+  const goal = selectedGoal
+  const pct = goal ? Math.min(1, (goal.current_amount || 0) / goal.target_amount) : 0
+  const pctDisplay = Math.round(pct * 100)
+
+  const monthlyNeeded = goal && goal.deadline
+    ? (() => {
+        const months = Math.max(1, Math.round((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24 * 30)))
+        return Math.ceil(((goal.target_amount || 0) - (goal.current_amount || 0)) / months)
+      })()
+    : null
+
+  const EMOJIS = ['🎯','🏠','🚗','✈️','💍','🎓','💻','🏖️','🐶','💪','🏋️','🎸']
 
   return (
-    <div className="min-h-screen bg-brand-dark pb-24 safe-top page-transition">
-      <div className="px-5 pt-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-gray-900 text-xl font-black">Metas de Ahorro</h1>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(0,200,150,0.1)', color: '#00C896' }}>
-            <Plus size={16} /> Nueva
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+
+      {/* Header */}
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
+        <div className="flex items-center justify-between px-5 pt-14 pb-4">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                <ChevronLeft size={20} color="#374151" />
+              </div>
+            </Link>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>Savings Mountain</h1>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>Tu camino al pico financiero</p>
+            </div>
+          </div>
+          <button onClick={() => setShowForm(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: '#DCFCE7' }}>
+            <Plus size={18} color="#16A34A" />
           </button>
         </div>
 
-        {loading ? (
-          <p className="text-brand-muted text-center py-10">Cargando tus metas...</p>
-        ) : goals.length === 0 ? (
-          <div className="card text-center py-12" style={{ border: '1.5px dashed rgba(0,200,150,0.35)' }}>
-            <p className="text-4xl mb-3">🎯</p>
-            <p className="text-gray-800 font-semibold">Misión: primera meta</p>
-            <p className="text-brand-muted text-sm mt-1">
-              Crea tu primer objetivo de ahorro<br />
-              y desbloquea el logro "Meta creada" 🏆
-            </p>
-            <button onClick={() => setShowForm(true)}
-              className="mt-4 px-6 py-2 rounded-xl font-semibold text-sm"
-              style={{ background: '#00C896', color: '#FFFFFF' }}>
-              Crear primera meta →
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {goals.map(goal => {
-              const progress = goal.target_amount > 0
-                ? Math.min(100, Math.round((goal.current_amount / goal.target_amount) * 100))
-                : 0
-              const completed = progress >= 100
-              return (
-                <div key={goal.id} className="card">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{goal.emoji}</span>
-                      <div>
-                        <p className="text-gray-900 font-bold">{goal.name}</p>
-                        {goal.deadline && (
-                          <p className="text-brand-muted text-xs">
-                            Plazo: {new Date(goal.deadline).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' })}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {completed && <span className="text-xs px-2 py-0.5 rounded-full font-bold"
-                      style={{ background: 'rgba(234,179,8,0.12)', color: '#CA8A04' }}>¡Logrado! 🏆</span>}
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="h-2.5 rounded-full mb-2" style={{ background: '#E2E8F0' }}>
-                    <div className="h-2.5 rounded-full transition-all duration-700"
-                      style={{
-                        width: `${progress}%`,
-                        background: completed
-                          ? 'linear-gradient(90deg, #EAB308, #F59E0B)'
-                          : 'linear-gradient(90deg, #00C896, #00E5B0)'
-                      }} />
-                  </div>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-gray-800 font-bold text-sm">
-                      {formatCurrency(goal.current_amount || 0)}
-                      <span className="text-brand-muted font-normal"> / {formatCurrency(goal.target_amount)}</span>
-                    </span>
-                    <span className="text-brand-green text-sm font-bold">{progress}%</span>
-                  </div>
-
-                  {!completed && (
-                    showAdd === goal.id ? (
-                      <div className="flex gap-2">
-                        <input
-                          className="input-dark flex-1 py-2"
-                          type="number"
-                          placeholder="¿Cuánto abonas?"
-                          value={addAmount}
-                          onChange={e => setAddAmount(e.target.value)}
-                          inputMode="decimal"
-                          autoFocus
-                        />
-                        <button onClick={() => handleAddAmount(goal.id)}
-                          className="px-4 py-2 rounded-xl font-semibold text-sm"
-                          style={{ background: '#00C896', color: '#FFFFFF' }}>
-                          Abonar
-                        </button>
-                        <button onClick={() => setShowAdd(null)}
-                          className="px-3 py-2 rounded-xl"
-                          style={{ background: '#F1F5F9' }}>
-                          <X size={16} color="#6B7280" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setShowAdd(goal.id)}
-                        className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
-                        style={{ background: 'rgba(0,200,150,0.08)', color: '#00C896', border: '1px solid rgba(0,200,150,0.2)' }}>
-                        + Abonar
-                      </button>
-                    )
-                  )}
-                </div>
-              )
-            })}
+        {/* Goal selector */}
+        {goals.length > 1 && (
+          <div className="px-5 pb-3 flex gap-2 overflow-x-auto">
+            {goals.map(g => (
+              <button key={g.id} onClick={() => setSelectedGoal(g)}
+                className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
+                style={{
+                  background: selectedGoal?.id === g.id ? '#22C55E' : '#F3F4F6',
+                  color: selectedGoal?.id === g.id ? '#FFFFFF' : '#374151',
+                }}>
+                {g.emoji} {g.name}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Add Goal Modal */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando tus metas...</p>
+        </div>
+      ) : goals.length === 0 ? (
+        <div className="px-5 mt-10 text-center">
+          <Mountain size={64} color="#D1D5DB" className="mx-auto mb-4" />
+          <p style={{ fontSize: 18, fontWeight: 800, color: '#374151' }}>Sin metas aún</p>
+          <p style={{ fontSize: 14, color: '#6B7280', marginTop: 8, marginBottom: 24 }}>
+            Crea tu primera meta y empieza a escalar la montaña
+          </p>
+          <button onClick={() => setShowForm(true)} className="btn-primary" style={{ maxWidth: 240, margin: '0 auto' }}>
+            + Crear primera meta
+          </button>
+        </div>
+      ) : goal && (
+        <div className="px-5 mt-5 space-y-4">
+
+          {/* Mountain visual */}
+          <div className="card-lg text-center">
+            <p style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 4 }}>
+              {goal.emoji} {goal.name}
+            </p>
+            <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 16 }}>
+              Meta: {formatCurrency(goal.target_amount)}
+            </p>
+            <MountainVisual pct={pct} />
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span style={{ fontSize: 22, fontWeight: 900, color: '#16A34A' }}>{formatCurrency(goal.current_amount || 0)}</span>
+                <span style={{ fontSize: 13, color: '#6B7280' }}>de {formatCurrency(goal.target_amount)}</span>
+              </div>
+              <div className="progress-track">
+                <div className="progress-fill"
+                  style={{ width: `${pctDisplay}%`, background: 'linear-gradient(90deg, #22C55E, #16A34A)' }} />
+              </div>
+              <p style={{ fontSize: 13, color: '#16A34A', fontWeight: 700, marginTop: 6 }}>{pctDisplay}% completado</p>
+            </div>
+          </div>
+
+          {/* Monthly tip */}
+          {monthlyNeeded && goal.current_amount < goal.target_amount && (
+            <div className="card" style={{ background: '#EDE9FE', border: '1.5px solid #C4B5FD' }}>
+              <p style={{ fontSize: 13, color: '#5B21B6', lineHeight: 1.5 }}>
+                💡 Si ahorras <strong>{formatCurrency(monthlyNeeded)}</strong>/mes,
+                alcanzarás tu meta antes de la fecha límite.
+              </p>
+            </div>
+          )}
+
+          {goal.current_amount >= goal.target_amount && (
+            <div className="card text-center" style={{ background: '#DCFCE7', border: '2px solid #22C55E' }}>
+              <p style={{ fontSize: 32, marginBottom: 8 }}>🏆</p>
+              <p style={{ fontSize: 18, fontWeight: 900, color: '#16A34A' }}>¡Meta alcanzada!</p>
+              <p style={{ fontSize: 13, color: '#15803D', marginTop: 4 }}>Subiste a la cima. ¡Sigue escalando!</p>
+            </div>
+          )}
+
+          {/* Deposit button */}
+          {goal.current_amount < goal.target_amount && (
+            <button onClick={() => setShowDeposit(true)} className="btn-primary">
+              💰 Agregar ahorro — +25 XP
+            </button>
+          )}
+
+          {/* Delete */}
+          <button
+            onClick={async () => {
+              await deleteGoal(goal.id)
+              const remaining = goals.filter(g => g.id !== goal.id)
+              setGoals(remaining)
+              setSelectedGoal(remaining[0] || null)
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold"
+            style={{ color: '#EF4444', background: '#FEF2F2' }}>
+            <Trash2 size={15} />
+            Eliminar meta
+          </button>
+
+          {/* Debt Dungeon link */}
+          <Link href="/debt-dungeon">
+            <div className="card flex items-center gap-3" style={{ border: '1.5px solid #FEE2E2', background: '#FFF5F5' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ background: '#FEE2E2' }}>
+                🐉
+              </div>
+              <div className="flex-1">
+                <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>Debt Dungeon</p>
+                <p style={{ fontSize: 12, color: '#6B7280' }}>Derrota tus deudas como jefes finales</p>
+              </div>
+              <Sword size={18} color="#EF4444" />
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* Add deposit modal */}
+      {showDeposit && (
+        <div className="fixed inset-0 z-[200] flex items-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeposit(false)} />
+          <div className="relative w-full rounded-t-3xl" style={{ background: '#FFFFFF', padding: 24 }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Agregar ahorro</h2>
+              <button onClick={() => setShowDeposit(false)}><X size={20} color="#6B7280" /></button>
+            </div>
+            <input
+              className="input-field"
+              style={{ fontSize: 28, fontWeight: 800, color: '#16A34A', marginBottom: 16 }}
+              type="number" placeholder="0.00"
+              value={depositAmt}
+              onChange={e => setDepositAmt(e.target.value)}
+              inputMode="decimal"
+            />
+            <button onClick={handleDeposit} disabled={savingDeposit || !depositAmt} className="btn-primary">
+              {savingDeposit ? 'Guardando...' : '💰 Guardar ahorro — +25 XP'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add goal modal */}
       {showForm && (
         <div className="fixed inset-0 z-[200] flex items-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
-          <div className="relative w-full rounded-t-3xl flex flex-col"
-            style={{ background: '#FFFFFF', maxHeight: '92vh', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-3"
-              style={{ borderBottom: '1px solid #F1F5F9' }}>
-              <h2 className="text-gray-900 text-lg font-bold">Nueva meta</h2>
-              <button onClick={() => setShowForm(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: '#F1F5F9' }}>
-                <X size={18} color="#6B7280" />
-              </button>
+          <div className="relative w-full rounded-t-3xl" style={{ background: '#FFFFFF', maxHeight: '90vh' }}>
+            <div className="flex items-center justify-between px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Nueva meta</h2>
+              <button onClick={() => setShowForm(false)}><X size={20} color="#6B7280" /></button>
             </div>
-
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <form id="add-goal-form" onSubmit={handleAddGoal} className="space-y-4">
+            <div className="overflow-y-auto px-6 py-4">
+              <form id="goal-form" onSubmit={handleAddGoal} className="space-y-4">
                 <div>
-                  <label className="text-brand-muted text-sm mb-2 block">Elige un emoji</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Emoji</label>
+                  <div className="grid grid-cols-6 gap-2 mb-2">
                     {EMOJIS.map(e => (
-                      <button key={e} type="button"
-                        onClick={() => setEmoji(e)}
-                        className="w-10 h-10 rounded-xl text-xl transition-all"
-                        style={{
-                          background: emoji === e ? 'rgba(0,200,150,0.12)' : '#F8FAFC',
-                          border: `1px solid ${emoji === e ? '#00C896' : '#E2E8F0'}`
-                        }}>
+                      <button key={e} type="button" onClick={() => setEmoji(e)}
+                        className="text-2xl p-2 rounded-xl transition-all"
+                        style={{ background: emoji === e ? '#DCFCE7' : '#F3F4F6', border: `2px solid ${emoji === e ? '#22C55E' : 'transparent'}` }}>
                         {e}
                       </button>
                     ))}
                   </div>
                 </div>
-
                 <div>
-                  <label className="text-brand-muted text-sm mb-1 block">Nombre de la meta</label>
-                  <input className="input-dark" placeholder="Ej: Vacaciones en Cartagena"
-                    value={name} onChange={e => setName(e.target.value)} required />
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Nombre de la meta</label>
+                  <input className="input-field" placeholder="Ej: Vacaciones a París" value={name} onChange={e => setName(e.target.value)} required />
                 </div>
-
                 <div>
-                  <label className="text-brand-muted text-sm mb-1 block">Monto objetivo</label>
-                  <input className="input-dark" type="number" placeholder="$0"
-                    value={target} onChange={e => setTarget(e.target.value)}
-                    inputMode="decimal" required />
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Monto objetivo</label>
+                  <input className="input-field" type="number" placeholder="0.00" value={targetAmount} onChange={e => setTargetAmount(e.target.value)} inputMode="decimal" required />
                 </div>
-
                 <div>
-                  <label className="text-brand-muted text-sm mb-1 block">Fecha límite (opcional)</label>
-                  <input className="input-dark" type="date"
-                    value={deadline} onChange={e => setDeadline(e.target.value)} />
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Fecha límite (opcional)</label>
+                  <input className="input-field" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
                 </div>
               </form>
             </div>
-
-            {/* Sticky save button */}
-            <div className="px-6 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-              <button form="add-goal-form" className="btn-primary" type="submit" disabled={saving}>
-                {saving ? 'Guardando...' : 'Crear meta 🎯'}
+            <div className="px-6 py-4" style={{ borderTop: '1px solid #F3F4F6' }}>
+              <button form="goal-form" type="submit" disabled={savingGoal} className="btn-primary">
+                {savingGoal ? 'Creando...' : '🏔️ Crear meta'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {xpFlash && <div className="xp-float">⚡ +25 XP ¡Buen ahorro!</div>}
       <BottomNav />
     </div>
   )

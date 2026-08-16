@@ -4,47 +4,52 @@
 @tailwind utilities;
 
 /* ============================================
-   PALETA CLARA — MyMoney GO
-   Forzar siempre modo claro
+   MONEY GO — NUEVO DISEÑO MVP
+   Tema claro, estilo gaming friendly
    ============================================ */
 :root {
   color-scheme: light;
 
-  --bg:          #F0FDF9;   /* verde muy suave — fresco */
-  --bg-card:     #FFFFFF;
-  --bg-input:    #F8FAFC;
-  --border:      #E2E8F0;
+  --green:       #22C55E;
+  --green-dark:  #16A34A;
+  --green-light: #DCFCE7;
+  --green-bg:    #F0FDF4;
 
-  --green:       #00C896;
-  --green-dark:  #00A67C;
-  --green-light: #ECFDF5;
-
-  --purple:      #7C3AED;
-  --purple-light:#F5F3FF;
+  --purple:      #8B5CF6;
+  --purple-light:#EDE9FE;
 
   --red:         #EF4444;
   --red-light:   #FEF2F2;
 
-  --amber:       #F59E0B;
-  --amber-light: #FFFBEB;
+  --orange:      #F97316;
+  --orange-light:#FFF7ED;
 
-  --text:        #0F172A;
-  --text-muted:  #64748B;
-  --text-light:  #94A3B8;
+  --yellow:      #EAB308;
+  --yellow-light:#FEFCE8;
+
+  --cyan:        #06B6D4;
+  --cyan-light:  #ECFEFF;
+
+  --bg:          #F9FAFB;
+  --bg-card:     #FFFFFF;
+  --bg-input:    #F9FAFB;
+
+  --border:      #E5E7EB;
+  --border-light:#F3F4F6;
+
+  --text:        #111827;
+  --text-2:      #374151;
+  --text-muted:  #6B7280;
+  --text-light:  #9CA3AF;
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.06);
 }
 
-/* Reset duro para ignorar dark mode del sistema */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  color-scheme: light !important;
-  background: var(--bg) !important;
-}
-
+/* Force light always */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light !important; background: var(--bg) !important; }
 body {
   background-color: var(--bg) !important;
   color: var(--text) !important;
@@ -53,51 +58,53 @@ body {
   overscroll-behavior: none;
 }
 
-/* Safe area para iPhone */
-.safe-top  { padding-top:    env(safe-area-inset-top); }
+/* Safe area */
+.safe-top    { padding-top:    env(safe-area-inset-top); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
-/* Scroll oculto — feel móvil */
+/* Scrollbar hidden */
 ::-webkit-scrollbar { display: none; }
 * { -ms-overflow-style: none; scrollbar-width: none; }
 * { -webkit-tap-highlight-color: transparent; }
 
-/* Transición de página */
+/* ============================================
+   PAGE TRANSITION
+   ============================================ */
 .page-transition {
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn 0.22s ease-out;
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================
-   CARD
+   CARDS
    ============================================ */
 .card {
   background:    var(--bg-card);
-  border:        1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   padding:       16px;
-  box-shadow:    0 1px 4px rgba(0,0,0,0.05), 0 0 0 0 transparent;
+  box-shadow:    var(--shadow-sm);
   font-variant-numeric: tabular-nums;
 }
 
-/* ============================================
-   GLOW
-   ============================================ */
-.glow-green {
-  box-shadow: 0 8px 32px rgba(0,200,150,0.25);
+.card-lg {
+  background:    var(--bg-card);
+  border-radius: 20px;
+  padding:       20px;
+  box-shadow:    var(--shadow-md);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================
    INPUTS
    ============================================ */
-.input-dark {
-  background:    var(--bg-input) !important;
-  border:        1.5px solid var(--border) !important;
+.input-field {
+  background:    var(--bg-input);
+  border:        1.5px solid var(--border);
   border-radius: 14px;
-  color:         var(--text) !important;
+  color:         var(--text);
   padding:       13px 16px;
   width:         100%;
   font-size:     16px;
@@ -107,19 +114,23 @@ body {
   -webkit-appearance: none;
   appearance: none;
 }
-
-.input-dark:focus {
-  border-color: var(--green) !important;
-  background:   #FFFFFF !important;
-  box-shadow:   0 0 0 3px rgba(0,200,150,0.12);
+.input-field:focus {
+  border-color: var(--green);
+  background:   #FFFFFF;
+  box-shadow:   0 0 0 3px rgba(34,197,94,0.12);
 }
+.input-field::placeholder { color: var(--text-light); }
 
-.input-dark::placeholder {
-  color: var(--text-light) !important;
-}
+/* Keep old class working */
+.input-dark { background: var(--bg-input) !important; border: 1.5px solid var(--border) !important; border-radius: 14px; color: var(--text) !important; padding: 13px 16px; width: 100%; font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none; }
+.input-dark:focus { border-color: var(--green) !important; background: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(34,197,94,0.12); }
+.input-dark::placeholder { color: var(--text-light) !important; }
+
+input, textarea, select { color: var(--text) !important; background-color: var(--bg-input) !important; }
+input:focus, textarea:focus, select:focus { background-color: #FFFFFF !important; }
 
 /* ============================================
-   BOTONES
+   BUTTONS
    ============================================ */
 .btn-primary {
   background:    var(--green);
@@ -132,17 +143,11 @@ body {
   border:        none;
   cursor:        pointer;
   font-family:   'Inter', sans-serif;
-  transition:    transform 0.1s, box-shadow 0.2s;
-  box-shadow:    0 4px 14px rgba(0,200,150,0.3);
+  transition:    transform 0.1s, box-shadow 0.15s;
+  box-shadow:    0 4px 14px rgba(34,197,94,0.35);
 }
-.btn-primary:active {
-  transform:  scale(0.98);
-  box-shadow: 0 2px 8px rgba(0,200,150,0.2);
-}
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-secondary {
   background:    var(--bg-input);
@@ -155,101 +160,100 @@ body {
   border:        1.5px solid var(--border);
   cursor:        pointer;
   font-family:   'Inter', sans-serif;
-  transition:    border-color 0.2s;
 }
-.btn-secondary:active {
-  border-color: var(--green);
-}
+.btn-secondary:active { border-color: var(--green); }
 
-/* Select */
-select.input-dark {
-  background: var(--bg-input) !important;
-  color:      var(--text) !important;
-  cursor:     pointer;
-}
-
-/* Forzar colores en todos los inputs del sistema */
-input, textarea, select {
-  color: var(--text) !important;
-  background-color: var(--bg-input) !important;
-}
-input:focus, textarea:focus, select:focus {
-  background-color: #FFFFFF !important;
+.btn-ghost {
+  background:    transparent;
+  color:         var(--text-muted);
+  font-weight:   600;
+  border-radius: 14px;
+  padding:       12px 20px;
+  font-size:     15px;
+  border:        none;
+  cursor:        pointer;
 }
 
 /* ============================================
-   OVERRIDE TAILWIND CUSTOM CLASSES — LIGHT MODE
-   Garantiza colores claros sin importar el build
+   PROGRESS BAR
    ============================================ */
-.bg-brand-dark   { background-color: #F0FDF9 !important; }
-.bg-brand-card   { background-color: #FFFFFF !important; }
-.bg-brand-light  { background-color: #ECFDF5 !important; }
-.text-brand-muted { color: #64748B !important; }
-.text-brand-green { color: #00C896 !important; }
-.text-gray-900   { color: #0F172A !important; }
+.progress-track {
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* ============================================
+   CHIPS / BADGES
+   ============================================ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.chip-green  { background: var(--green-light);  color: var(--green-dark); }
+.chip-red    { background: var(--red-light);    color: #DC2626; }
+.chip-orange { background: var(--orange-light); color: #C2410C; }
+.chip-purple { background: var(--purple-light); color: #6D28D9; }
+.chip-yellow { background: var(--yellow-light); color: #A16207; }
+.chip-cyan   { background: var(--cyan-light);   color: #0E7490; }
+
+/* ============================================
+   OVERRIDE LEGACY CLASSES
+   ============================================ */
+.bg-brand-dark   { background-color: var(--bg) !important; }
+.bg-brand-card   { background-color: var(--bg-card) !important; }
+.bg-brand-light  { background-color: var(--green-bg) !important; }
+.text-brand-muted { color: var(--text-muted) !important; }
+.text-brand-green { color: var(--green) !important; }
+.text-gray-900   { color: #111827 !important; }
 .text-gray-700   { color: #374151 !important; }
 .text-gray-600   { color: #4B5563 !important; }
 .text-gray-500   { color: #6B7280 !important; }
-
-/* Tarjeta / card */
-.card {
-  background-color: #FFFFFF !important;
-  color: #0F172A !important;
-}
+.card            { background-color: #FFFFFF !important; color: #111827 !important; }
 
 /* ============================================
-   DARK MODE MEDIA QUERY — ANULAR COMPLETAMENTE
-   Si el dispositivo está en dark mode, igual
-   forzamos nuestra paleta clara
-   ============================================ */
-/* ============================================
-   XP REWARD ANIMATION
+   XP FLOAT ANIMATION
    ============================================ */
 @keyframes xpFloat {
   0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-  60%  { opacity: 1; transform: translateX(-50%) translateY(-28px) scale(1.08); }
-  100% { opacity: 0; transform: translateX(-50%) translateY(-56px) scale(0.92); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(-28px) scale(1.1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-56px) scale(0.9); }
 }
 .xp-float {
   position: fixed;
   bottom: 120px;
   left: 50%;
-  z-index: 300;
-  background: linear-gradient(135deg, #00C896, #00A67C);
+  z-index: 400;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
   color: #FFFFFF;
-  font-size: 17px;
-  font-weight: 900;
-  padding: 10px 24px;
-  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 10px 22px;
+  border-radius: 99px;
   pointer-events: none;
   animation: xpFloat 1.4s ease-out forwards;
   white-space: nowrap;
-  box-shadow: 0 6px 24px rgba(0,200,150,0.55);
-  letter-spacing: -0.01em;
+  box-shadow: 0 6px 20px rgba(34,197,94,0.45);
 }
 
+/* ============================================
+   DARK MODE — FORCE LIGHT
+   ============================================ */
 @media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: light;
-  }
-  html, body {
-    background-color: #F0FDF9 !important;
-    color: #0F172A !important;
-  }
-  .bg-brand-dark   { background-color: #F0FDF9 !important; }
-  .bg-brand-card   { background-color: #FFFFFF !important; }
-  .card            { background-color: #FFFFFF !important; color: #0F172A !important; }
-  .text-gray-900   { color: #0F172A !important; }
-  .text-gray-700   { color: #374151 !important; }
-  .text-gray-600   { color: #4B5563 !important; }
-  .text-gray-500   { color: #6B7280 !important; }
-  .text-brand-muted { color: #64748B !important; }
-  input, textarea, select {
-    background-color: #F8FAFC !important;
-    color: #0F172A !important;
-    border-color: #E2E8F0 !important;
-  }
-  input:focus, textarea:focus, select:focus {
-    background-color: #FFFFFF !important;
-  }
+  :root { color-scheme: light; }
+  html, body { background-color: var(--bg) !important; color: var(--text) !important; }
+  .bg-brand-dark { background-color: var(--bg) !important; }
+  .card { background-color: #FFFFFF !important; color: #111827 !important; }
+  input, textarea, select { background-color: var(--bg-input) !important; color: var(--text) !important; }
 }

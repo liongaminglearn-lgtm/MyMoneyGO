@@ -1,392 +1,215 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  getUser, getProfile, getTransactions, getBudgets, upsertBudget, updateProfile,
-} from '@/lib/supabase'
-import { CATEGORIES, formatCurrency, getCurrentMonth, getMonthName } from '@/lib/utils'
+import { getUser, getTransactions, getBudgets, upsertBudget } from '@/lib/supabase'
+import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { X, Pencil, Shield, Zap, Trophy, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, Edit3, Check, X } from 'lucide-react'
+import Link from 'next/link'
 
-const EXPENSE_CATS = CATEGORIES.filter(c => !['salary', 'freelance'].includes(c.id))
-
-function getHPColor(pct) {
-  if (pct <= 25) return { bar: '#EF4444', text: '#EF4444', bg: 'rgba(239,68,68,0.1)', label: 'PELIGRO' }
-  if (pct <= 50) return { bar: '#F59E0B', text: '#D97706', bg: 'rgba(245,158,11,0.1)', label: 'ALERTA' }
-  if (pct <= 75) return { bar: '#EAB308', text: '#CA8A04', bg: 'rgba(234,179,8,0.08)', label: 'CUIDADO' }
-  return { bar: '#00C896', text: '#00A67C', bg: 'rgba(0,200,150,0.08)', label: 'BIEN' }
-}
-
-function HPBar({ pct, color, height = 10 }) {
-  const safePct = Math.min(100, Math.max(0, pct))
-  return (
-    <div className="w-full rounded-full overflow-hidden" style={{ height, background: '#E2E8F0' }}>
-      <div
-        className="h-full rounded-full transition-all duration-700"
-        style={{ width: `${safePct}%`, background: color }}
-      />
-    </div>
-  )
-}
-
-function BossHealthBar({ totalBudget, totalSpent }) {
-  if (totalBudget === 0) return null
-  const pct = Math.max(0, 100 - Math.min(100, (totalSpent / totalBudget) * 100))
-  const theme = getHPColor(pct)
-  const bossHurt = pct <= 50
-
-  return (
-    <div className="card rounded-3xl p-5 mb-4 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #2D1B69 100%)' }}>
-      <div className="absolute inset-0 opacity-5"
-        style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #A78BFA 0%, transparent 60%)' }} />
-
-      {/* Boss */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-purple-300 text-xs font-semibold tracking-widest uppercase mb-0.5">Jefe del Mes</p>
-          <h2 className="text-white text-xl font-black">
-            {bossHurt ? '💀 Mes en Peligro' : '👹 Gastos Monstruosos'}
-          </h2>
-        </div>
-        <div className="text-4xl">{bossHurt ? '💔' : '🛡️'}</div>
-      </div>
-
-      {/* Boss HP */}
-      <div className="mb-1 flex justify-between items-center">
-        <span className="text-purple-300 text-xs font-bold">HP DEL BOSS</span>
-        <span className="text-xs font-bold" style={{ color: theme.text }}>{Math.round(pct)}%</span>
-      </div>
-      <div className="h-4 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.1)' }}>
-        <div
-          className="h-4 rounded-full transition-all duration-700 relative overflow-hidden"
-          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${theme.bar}, ${theme.bar}CC)` }}>
-          <div className="absolute inset-0 opacity-30"
-            style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 12px)' }} />
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="flex gap-3">
-        <div className="flex-1 rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <p className="text-purple-300 text-xs mb-0.5">Presupuesto</p>
-          <p className="text-white font-black text-base">{formatCurrency(totalBudget)}</p>
-        </div>
-        <div className="flex-1 rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <p className="text-purple-300 text-xs mb-0.5">Gastado</p>
-          <p className="font-black text-base" style={{ color: theme.bar }}>{formatCurrency(totalSpent)}</p>
-        </div>
-        <div className="flex-1 rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.07)' }}>
-          <p className="text-purple-300 text-xs mb-0.5">Libre</p>
-          <p className="text-white font-black text-base">{formatCurrency(Math.max(0, totalBudget - totalSpent))}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+const EXPENSE_CATS = ['housing','food','transport','utilities','entertainment','education','health','clothing','other']
 
 export default function BudgetPage() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [transactions, setTransactions] = useState([])
-  const [budgets, setBudgets] = useState([])
+  const [budgets, setBudgets] = useState({})
   const [loading, setLoading] = useState(true)
-  const [month, setMonth] = useState(getCurrentMonth())
-  const [editCat, setEditCat] = useState(null)
-  const [editAmount, setEditAmount] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [draftBudgets, setDraftBudgets] = useState({})
   const [saving, setSaving] = useState(false)
-  const [xpFlash, setXpFlash] = useState(false)
 
-  const load = useCallback(async (m) => {
-    const u = await getUser()
-    if (!u) { router.push('/auth/login'); return }
-    setUser(u)
-    const [{ data: prof }, { data: txns }, { data: bgets }] = await Promise.all([
-      getProfile(u.id),
-      getTransactions(u.id, m),
-      getBudgets(u.id, m),
-    ])
-    setProfile(prof)
-    setTransactions(txns || [])
-    setBudgets(bgets || [])
-    setLoading(false)
-  }, [router])
+  const month = getCurrentMonth()
+  const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const now = new Date()
+  const monthLabel = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`
 
-  useEffect(() => { load(month) }, [load, month])
-
-  function changeMonth(dir) {
-    const [y, mo] = month.split('-').map(Number)
-    const d = new Date(y, mo - 1 + dir, 1)
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-  }
-
-  function getBudgetForCat(catId) {
-    return budgets.find(b => b.category === catId)?.amount || 0
-  }
-
-  function getSpentForCat(catId) {
-    return transactions
-      .filter(t => t.type === 'expense' && t.category === catId)
-      .reduce((s, t) => s + t.amount, 0)
-  }
-
-  async function handleSaveBudget() {
-    if (!editAmount || isNaN(editAmount) || Number(editAmount) < 0) return
-    setSaving(true)
-    const prev = getBudgetForCat(editCat)
-    const { data } = await upsertBudget(user.id, month, editCat, Number(editAmount))
-    if (data) {
-      setBudgets(prev2 => {
-        const existing = prev2.findIndex(b => b.category === editCat)
-        const updated = { category: editCat, amount: Number(editAmount), month }
-        return existing >= 0
-          ? prev2.map((b, i) => i === existing ? { ...b, ...updated } : b)
-          : [...prev2, { ...updated, id: Date.now() }]
-      })
-      if (prev === 0 && Number(editAmount) > 0 && profile) {
-        const newXp = (profile.xp || 0) + 15
-        await updateProfile(user.id, { xp: newXp })
-        setProfile(p => ({ ...p, xp: newXp }))
-        setXpFlash(true)
-        setTimeout(() => setXpFlash(false), 2000)
-      }
+  useEffect(() => {
+    async function load() {
+      const u = await getUser()
+      if (!u) { router.push('/auth/login'); return }
+      setUserId(u.id)
+      const [{ data: txns }, { data: bdgs }] = await Promise.all([
+        getTransactions(u.id, month),
+        getBudgets(u.id, month),
+      ])
+      setTransactions(txns || [])
+      const budgetMap = {}
+      ;(bdgs || []).forEach(b => { budgetMap[b.category] = b.amount })
+      setBudgets(budgetMap)
+      setDraftBudgets(budgetMap)
+      setLoading(false)
     }
-    setEditCat(null)
+    load()
+  }, [router, month])
+
+  const spentMap = {}
+  transactions.filter(t => t.type === 'expense').forEach(t => {
+    spentMap[t.category] = (spentMap[t.category] || 0) + t.amount
+  })
+
+  async function handleSave() {
+    setSaving(true)
+    const entries = Object.entries(draftBudgets).filter(([, v]) => Number(v) > 0)
+    await Promise.all(entries.map(([cat, amt]) => upsertBudget(userId, month, cat, Number(amt))))
+    setBudgets({ ...draftBudgets })
+    setEditing(false)
     setSaving(false)
   }
 
-  const totalBudget = budgets.reduce((s, b) => s + (b.amount || 0), 0)
-  const totalSpent = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((s, t) => s + t.amount, 0)
+  const totalBudgeted = Object.values(budgets).reduce((s, v) => s + Number(v), 0)
+  const totalSpent = Object.values(spentMap).reduce((s, v) => s + v, 0)
 
-  const catsWithBudget = EXPENSE_CATS.filter(c => getBudgetForCat(c.id) > 0)
-  const catsNoBudget = EXPENSE_CATS.filter(c => getBudgetForCat(c.id) === 0)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-        <div className="text-brand-green text-xl font-black animate-pulse">Preparando la batalla...</div>
-      </div>
-    )
-  }
+  const cats = EXPENSE_CATS.map(id => {
+    const cat = CATEGORIES.find(c => c.id === id)
+    const spent = spentMap[id] || 0
+    const limit = budgets[id] || 0
+    const pct = limit > 0 ? (spent / limit) * 100 : 0
+    return { id, cat, spent, limit, pct }
+  }).filter(c => c.spent > 0 || c.limit > 0 || editing)
 
   return (
-    <div className="min-h-screen bg-brand-dark pb-28 safe-top page-transition">
-      {/* XP Flash */}
-      {xpFlash && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-2xl font-bold text-sm animate-bounce"
-          style={{ background: 'rgba(0,200,150,0.95)', color: '#FFFFFF', boxShadow: '0 4px 20px rgba(0,200,150,0.5)' }}>
-          ⚡ +15 XP ¡Presupuesto configurado!
-        </div>
-      )}
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
 
       {/* Header */}
-      <div className="px-5 pt-6 pb-3">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-gray-900 text-xl font-black">Presupuesto 🎮</h1>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-xl"
-            style={{ background: 'rgba(0,200,150,0.1)' }}>
-            <Zap size={13} color="#00C896" />
-            <span className="text-brand-green text-xs font-bold">{profile?.xp || 0} XP</span>
-          </div>
-        </div>
-
-        {/* Month selector */}
-        <div className="flex items-center gap-2 mt-2">
-          <button onClick={() => changeMonth(-1)}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: '#F1F5F9' }}>
-            <ChevronLeft size={16} color="#6B7280" />
-          </button>
-          <span className="flex-1 text-center text-gray-800 font-semibold text-sm capitalize">
-            {getMonthName(month)}
-          </span>
-          <button onClick={() => changeMonth(1)}
-            className="w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: '#F1F5F9' }}>
-            <ChevronRight size={16} color="#6B7280" />
-          </button>
-        </div>
-      </div>
-
-      <div className="px-5">
-        {/* Boss health bar */}
-        {totalBudget > 0
-          ? <BossHealthBar totalBudget={totalBudget} totalSpent={totalSpent} />
-          : (
-            <div className="card rounded-2xl p-5 mb-4 text-center"
-              style={{ background: 'linear-gradient(135deg, #1E1B4B, #2D1B69)' }}>
-              <div className="text-4xl mb-2">🎮</div>
-              <p className="text-white font-bold mb-1">¡Define tu presupuesto!</p>
-              <p className="text-purple-300 text-sm">Configura límites por categoría para activar el modo batalla</p>
+      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
+        <div className="flex items-center justify-between px-5 pt-14 pb-4">
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                <ChevronLeft size={20} color="#374151" />
+              </div>
+            </Link>
+            <div>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>Presupuesto</h1>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>{monthLabel}</p>
             </div>
-          )
-        }
+          </div>
+          {editing ? (
+            <div className="flex gap-2">
+              <button onClick={() => { setEditing(false); setDraftBudgets(budgets) }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: '#FEE2E2' }}>
+                <X size={18} color="#DC2626" />
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: '#DCFCE7' }}>
+                <Check size={18} color="#16A34A" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: '#F3F4F6', color: '#374151' }}>
+              <Edit3 size={14} />
+              Editar
+            </button>
+          )}
+        </div>
 
-        {/* Categories with budget */}
-        {catsWithBudget.length > 0 && (
-          <div className="mb-5">
-            <h2 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-              <Shield size={15} color="#00C896" />
-              Categorías activas
-            </h2>
-            <div className="space-y-3">
-              {catsWithBudget.map(cat => {
-                const budget = getBudgetForCat(cat.id)
-                const spent = getSpentForCat(cat.id)
-                const remaining = budget - spent
-                const spentPct = budget > 0 ? (spent / budget) * 100 : 0
-                const hpPct = Math.max(0, 100 - spentPct)
-                const theme = getHPColor(hpPct)
-                const over = spent > budget
-
-                return (
-                  <div key={cat.id} className="card rounded-2xl p-4"
-                    style={{ background: over ? 'rgba(239,68,68,0.04)' : theme.bg, borderColor: over ? 'rgba(239,68,68,0.3)' : 'rgba(0,0,0,0.06)' }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                          style={{ background: `${cat.color}20` }}>
-                          {cat.icon}
-                        </div>
-                        <div>
-                          <p className="text-gray-900 font-bold text-sm">{cat.name}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                              style={{ background: over ? 'rgba(239,68,68,0.12)' : theme.bg, color: over ? '#EF4444' : theme.text }}>
-                              {over ? '⚠ EXCEDIDO' : theme.label}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={() => { setEditCat(cat.id); setEditAmount(String(budget)) }}
-                        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ background: '#F1F5F9' }}>
-                        <Pencil size={12} color="#6B7280" />
-                      </button>
-                    </div>
-
-                    {/* HP Bar */}
-                    <HPBar pct={hpPct} color={over ? '#EF4444' : theme.bar} height={8} />
-
-                    <div className="flex justify-between mt-1.5">
-                      <span className="text-xs text-brand-muted">
-                        {formatCurrency(spent)} gastado
-                      </span>
-                      <span className="text-xs font-semibold" style={{ color: over ? '#EF4444' : theme.text }}>
-                        {over
-                          ? `${formatCurrency(Math.abs(remaining))} de exceso`
-                          : `${formatCurrency(remaining)} libre`}
-                      </span>
-                    </div>
-                    <p className="text-right text-xs text-brand-muted mt-0.5">
-                      Límite: {formatCurrency(budget)}
-                    </p>
-                  </div>
-                )
-              })}
+        {/* Summary bar */}
+        {!editing && (
+          <div className="px-5 pb-4 flex gap-3">
+            <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#F0FDF4' }}>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>PRESUPUESTO</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#16A34A' }}>{formatCurrency(totalBudgeted)}</p>
+            </div>
+            <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#FEF2F2' }}>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>GASTADO</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalSpent)}</p>
+            </div>
+            <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#F0F9FF' }}>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>RESTANTE</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#0369A1' }}>{formatCurrency(totalBudgeted - totalSpent)}</p>
             </div>
           </div>
         )}
-
-        {/* Categories without budget */}
-        <div className="mb-5">
-          <h2 className="text-gray-900 font-bold mb-3 flex items-center gap-2">
-            <Trophy size={15} color="#EAB308" />
-            {catsWithBudget.length > 0 ? 'Añadir límites' : 'Elige tus categorías'}
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {catsNoBudget.map(cat => {
-              const spent = getSpentForCat(cat.id)
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => { setEditCat(cat.id); setEditAmount('') }}
-                  className="card rounded-2xl p-3 text-left transition-all active:scale-95"
-                  style={{ border: '1.5px dashed #E2E8F0' }}>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-xl">{cat.icon}</span>
-                    <span className="text-gray-800 font-semibold text-sm">{cat.name}</span>
-                  </div>
-                  {spent > 0 && (
-                    <p className="text-xs text-red-500 font-medium">{formatCurrency(spent)} gastado</p>
-                  )}
-                  <p className="text-brand-green text-xs font-semibold mt-0.5">+ Definir límite</p>
-                </button>
-              )
-            })}
-          </div>
-        </div>
       </div>
 
-      {/* Edit Budget Modal */}
-      {editCat && (() => {
-        const cat = EXPENSE_CATS.find(c => c.id === editCat)
-        const spent = getSpentForCat(editCat)
-        return (
-          <div className="fixed inset-0 z-[200] flex items-end">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setEditCat(null)} />
-            <div className="relative w-full rounded-t-3xl"
-              style={{ background: '#FFFFFF', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-              <div className="flex items-center justify-between px-6 pt-5 pb-4"
-                style={{ borderBottom: '1px solid #F1F5F9' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                    style={{ background: `${cat.color}20` }}>
-                    {cat.icon}
-                  </div>
-                  <div>
-                    <h2 className="text-gray-900 font-bold">{cat.name}</h2>
-                    <p className="text-brand-muted text-xs">Gastado: {formatCurrency(spent)}</p>
-                  </div>
-                </div>
-                <button onClick={() => setEditCat(null)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: '#F1F5F9' }}>
-                  <X size={18} color="#6B7280" />
-                </button>
-              </div>
-
-              <div className="px-6 py-5">
-                <label className="text-brand-muted text-sm mb-2 block">Límite mensual para {cat.name}</label>
-                <input
-                  className="input-dark text-2xl font-bold mb-4"
-                  type="number"
-                  placeholder="0"
-                  value={editAmount}
-                  onChange={e => setEditAmount(e.target.value)}
-                  inputMode="decimal"
-                  autoFocus
-                />
-
-                {/* Quick suggestions */}
-                <div className="flex gap-2 mb-5">
-                  {[50, 100, 200, 500].map(v => (
-                    <button key={v} onClick={() => setEditAmount(String(v))}
-                      className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-                      style={{
-                        background: editAmount === String(v) ? 'rgba(0,200,150,0.1)' : '#F8FAFC',
-                        border: `1px solid ${editAmount === String(v) ? '#00C896' : '#E2E8F0'}`,
-                        color: editAmount === String(v) ? '#00C896' : '#6B7280',
-                      }}>
-                      ${v}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={handleSaveBudget}
-                  disabled={saving}
-                  className="btn-primary">
-                  {saving ? 'Guardando...' : `Guardar límite ${getBudgetForCat(editCat) === 0 ? '(+15 XP)' : ''}`}
-                </button>
-              </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
+        </div>
+      ) : (
+        <div className="px-5 mt-5 space-y-3">
+          {editing && (
+            <div className="card" style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
+              <p style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>
+                💡 Establece un límite de gasto para cada categoría
+              </p>
             </div>
-          </div>
-        )
-      })()}
+          )}
+
+          {cats.length === 0 && !editing && (
+            <div className="card text-center py-10" style={{ border: '1.5px dashed #E5E7EB' }}>
+              <p className="text-4xl mb-3">📊</p>
+              <p style={{ fontWeight: 600, color: '#374151' }}>Sin datos aún</p>
+              <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>Registra gastos o edita los límites</p>
+            </div>
+          )}
+
+          {/* All cats in edit mode, only cats with data otherwise */}
+          {(editing ? EXPENSE_CATS : cats.map(c => c.id)).map(id => {
+            const catInfo = CATEGORIES.find(c => c.id === id)
+            const spent = spentMap[id] || 0
+            const limit = editing ? (Number(draftBudgets[id]) || 0) : (budgets[id] || 0)
+            const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : (spent > 0 ? 100 : 0)
+            const over = limit > 0 && spent > limit
+            const near = !over && limit > 0 && pct >= 80
+
+            const barColor = over ? '#EF4444' : near ? '#F97316' : '#22C55E'
+
+            return (
+              <div key={id} className="card">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: 20 }}>{catInfo?.icon || '📦'}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{catInfo?.name || id}</span>
+                    {over && <span className="chip chip-red text-xs">Excedido</span>}
+                  </div>
+                  {editing ? (
+                    <input
+                      type="number"
+                      placeholder="Límite"
+                      value={draftBudgets[id] || ''}
+                      onChange={e => setDraftBudgets(prev => ({ ...prev, [id]: e.target.value }))}
+                      className="input-field text-right font-bold"
+                      style={{ width: 110, padding: '6px 10px', fontSize: 14 }}
+                      inputMode="decimal"
+                    />
+                  ) : (
+                    <div className="text-right">
+                      <p style={{ fontSize: 13, fontWeight: 700, color: over ? '#DC2626' : '#111827' }}>
+                        {formatCurrency(spent)}
+                      </p>
+                      {limit > 0 && <p style={{ fontSize: 11, color: '#9CA3AF' }}>de {formatCurrency(limit)}</p>}
+                    </div>
+                  )}
+                </div>
+
+                {!editing && (
+                  <>
+                    <div className="progress-track">
+                      <div className="progress-fill" style={{ width: `${pct}%`, background: barColor }} />
+                    </div>
+                    {limit > 0 && (
+                      <div className="flex justify-between mt-1.5">
+                        <span style={{ fontSize: 11, color: barColor, fontWeight: 600 }}>
+                          {Math.round(pct)}%
+                        </span>
+                        <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+                          {over ? `−${formatCurrency(spent - limit)} excedido` : `${formatCurrency(limit - spent)} libre`}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <BottomNav />
     </div>

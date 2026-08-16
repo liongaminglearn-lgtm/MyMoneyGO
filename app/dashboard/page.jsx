@@ -1,277 +1,268 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase, getUser, getProfile, getTransactions, getBudgets, updateProfile } from '@/lib/supabase'
-import { formatCurrency, getCurrentMonth, getMonthName, calculateLevel } from '@/lib/utils'
-import BottomNav from '@/components/ui/BottomNav'
-import XPBar from '@/components/ui/XPBar'
-import TransactionCard from '@/components/ui/TransactionCard'
-import { Flame, TrendingUp, TrendingDown, Wallet, Sword } from 'lucide-react'
 import Link from 'next/link'
-
-function getGreeting() {
-  const h = new Date().getHours()
-  if (h < 12) return 'Buenos días'
-  if (h < 18) return 'Buenas tardes'
-  return 'Buenas noches'
-}
-
-function BudgetMini({ budgets, expenses }) {
-  if (!budgets || budgets.length === 0) {
-    return (
-      <Link href="/budget"
-        className="flex items-center justify-between rounded-2xl px-4 py-3"
-        style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(79,70,229,0.05))', border: '1px solid rgba(124,58,237,0.18)' }}>
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">⚔️</span>
-          <div>
-            <p className="text-purple-700 font-bold text-sm">Modo Batalla</p>
-            <p className="text-purple-500 text-xs">Define tu presupuesto mensual</p>
-          </div>
-        </div>
-        <span className="text-purple-400 text-xs font-bold">→</span>
-      </Link>
-    )
-  }
-
-  const totalBudget = budgets.reduce((s, b) => s + (b.amount || 0), 0)
-  const totalSpent = expenses
-  const pct = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0
-  const hpPct = 100 - pct
-  const barColor = hpPct <= 25 ? '#EF4444' : hpPct <= 50 ? '#F59E0B' : '#00C896'
-  const status = hpPct <= 25 ? '🔴 PELIGRO' : hpPct <= 50 ? '🟡 ALERTA' : '🟢 BIEN'
-
-  return (
-    <Link href="/budget"
-      className="rounded-2xl p-4 block"
-      style={{ background: 'linear-gradient(135deg, #1E1B4B, #2D1B69)' }}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">⚔️</span>
-          <p className="text-white font-bold text-sm">Batalla del Mes</p>
-        </div>
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(255,255,255,0.1)', color: '#E2E8F0' }}>
-          {status}
-        </span>
-      </div>
-      <div className="h-2.5 rounded-full overflow-hidden mb-1.5" style={{ background: 'rgba(255,255,255,0.1)' }}>
-        <div className="h-2.5 rounded-full transition-all duration-700"
-          style={{ width: `${hpPct}%`, background: barColor }} />
-      </div>
-      <div className="flex justify-between">
-        <p className="text-purple-300 text-xs">{formatCurrency(totalSpent)} gastado</p>
-        <p className="text-purple-300 text-xs">de {formatCurrency(totalBudget)}</p>
-      </div>
-    </Link>
-  )
-}
+import { getUser, getProfile, updateProfile, getTransactions, getDebts } from '@/lib/supabase'
+import { calculateLevel, getLevelProgress, formatCurrency, getCurrentMonth } from '@/lib/utils'
+import BottomNav from '@/components/ui/BottomNav'
+import CompanionAvatar, { COMPANIONS } from '@/components/ui/CompanionAvatar'
+import { Coins, Zap, Flame, ChevronRight, Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle } from 'lucide-react'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [transactions, setTransactions] = useState([])
-  const [budgets, setBudgets] = useState([])
+  const [debts, setDebts] = useState([])
   const [loading, setLoading] = useState(true)
-
-  const currentMonth = getCurrentMonth()
+  const [xpFlash, setXpFlash] = useState(false)
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      setUser(u)
-
-      const [{ data: prof }, { data: txns }, { data: bgets }] = await Promise.all([
+      const month = getCurrentMonth()
+      const [{ data: prof }, { data: txns }, { data: dts }] = await Promise.all([
         getProfile(u.id),
-        getTransactions(u.id, currentMonth),
-        getBudgets(u.id, currentMonth),
+        getTransactions(u.id, month),
+        getDebts(u.id),
       ])
-
-      // Actualizar streak
-      if (prof) {
-        const today = new Date().toISOString().split('T')[0]
-        const lastActive = prof.last_active
-        if (lastActive !== today) {
-          const yesterday = new Date()
-          yesterday.setDate(yesterday.getDate() - 1)
-          const yesterdayStr = yesterday.toISOString().split('T')[0]
-          const newStreak = lastActive === yesterdayStr ? (prof.streak || 0) + 1 : 1
-          await updateProfile(u.id, { last_active: today, streak: newStreak })
-          prof.streak = newStreak
-          prof.last_active = today
+      if (prof && !prof.onboarding_complete) {
+        // Skip onboarding for existing users who already have data
+        if ((prof.xp || 0) > 0 || (prof.monthly_income || 0) > 0) {
+          await updateProfile(u.id, { onboarding_complete: true })
+        } else {
+          router.push('/onboarding')
+          return
         }
       }
-
       setProfile(prof)
       setTransactions(txns || [])
-      setBudgets(bgets || [])
+      setDebts(dts || [])
       setLoading(false)
     }
     load()
+  }, [router])
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') router.push('/auth/login')
-    })
-    return () => subscription.unsubscribe()
-  }, [router, currentMonth])
-
-  const income = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const expense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const balance = income - expense
-  const recent = transactions.slice(0, 5)
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="text-brand-green text-2xl font-black animate-pulse">MyMoney GO</div>
-          <p className="text-brand-muted text-sm">Cargando tu universo...</p>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
+      <div className="text-center">
+        <div className="text-5xl mb-4 animate-bounce">🎮</div>
+        <p style={{ color: '#22C55E', fontWeight: 800 }} className="animate-pulse">Cargando tu aventura...</p>
       </div>
-    )
-  }
+    </div>
+  )
 
+  const income  = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const expense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const totalDebt = debts.reduce((s, d) => s + d.balance, 0)
+  const available = income - expense
+
+  const monthlyIncome = profile?.monthly_income || income
   const levelInfo = calculateLevel(profile?.xp || 0)
+  const progress = getLevelProgress(profile?.xp || 0)
+  const companionId = profile?.companion_id || 'nova'
+  const companion = COMPANIONS[companionId] || COMPANIONS.nova
+  const activeMission = debts[0]
+
+  const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const now = new Date()
+  const monthLabel = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`
 
   return (
-    <div className="min-h-screen bg-brand-dark pb-24 safe-top page-transition">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-2">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-brand-muted text-sm">{getGreeting()} 👋</p>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+
+      {/* ── Header con gradiente verde ── */}
+      <div style={{ background: 'linear-gradient(145deg, #22C55E 0%, #16A34A 100%)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
+        <div className="px-5 pt-2 pb-20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CompanionAvatar companionId={companionId} size={52} showGlow />
+              <div>
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12 }}>¡Hola, {profile?.name?.split(' ')[0] || 'héroe'}!</p>
+                <p style={{ color: '#FFFFFF', fontWeight: 800, fontSize: 18 }}>Tu progreso</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
-              <h1 className="text-gray-900 text-xl font-black">{profile?.name || 'Amigo'}</h1>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
-                style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED' }}>
-                Lv.{levelInfo.level} {levelInfo.level >= 5 ? '👑' : levelInfo.level >= 4 ? '🥇' : levelInfo.level >= 3 ? '🥈' : levelInfo.level >= 2 ? '🥉' : '🌱'}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-            style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}>
-            <Flame size={16} color="#F97316" />
-            <span className="text-gray-800 text-sm font-bold">{profile?.streak || 0}</span>
-            <span className="text-brand-muted text-xs">días</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Balance Card */}
-      <div className="px-5 mb-4">
-        <div className="rounded-3xl p-6 relative overflow-hidden glow-green"
-          style={{ background: 'linear-gradient(135deg, #00C896 0%, #00A67C 100%)' }}>
-          <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10"
-            style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
-          <p className="text-green-100 text-sm font-medium opacity-90 mb-1 capitalize">{getMonthName(currentMonth)}</p>
-          <p className="text-white text-4xl font-black mb-4">{formatCurrency(balance)}</p>
-          <div className="flex gap-4">
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
-                <TrendingUp size={14} color="rgba(255,255,255,0.8)" />
-                <p className="text-green-100 text-xs opacity-80">Ingresos</p>
+              <div className="flex items-center gap-1 px-3 py-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                <span style={{ fontSize: 14 }}>🪙</span>
+                <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 14 }}>{profile?.coins || 0}</span>
               </div>
-              <p className="text-white font-bold">{formatCurrency(income)}</p>
             </div>
-            <div className="w-px bg-white opacity-20" />
-            <div>
-              <div className="flex items-center gap-1 mb-0.5">
-                <TrendingDown size={14} color="rgba(255,255,255,0.8)" />
-                <p className="text-green-100 text-xs opacity-80">Gastos</p>
+          </div>
+
+          {/* XP Bar */}
+          <div className="mt-5">
+            <div className="flex justify-between items-center mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: 'rgba(255,255,255,0.25)', color: '#FFFFFF' }}>
+                  ⚡ Nivel {levelInfo.level}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{levelInfo.name}</span>
               </div>
-              <p className="text-white font-bold">{formatCurrency(expense)}</p>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{profile?.xp || 0} XP</span>
+            </div>
+            <div style={{ height: 6, background: 'rgba(255,255,255,0.25)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progress}%`, background: '#FFFFFF', borderRadius: 99 }} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* XP Bar — tap para ver misiones */}
-      <div className="px-5 mb-4">
-        <Link href="/missions" className="block active:scale-95 transition-transform">
-          <XPBar xp={profile?.xp || 0} />
-        </Link>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="px-5 mb-4">
-        <div className="grid grid-cols-3 gap-2">
-          <Link href="/transactions?type=income"
-            className="card flex flex-col items-center gap-1.5 py-3 active:scale-95 transition-transform text-center">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(0,200,150,0.12)' }}>
-              <TrendingUp size={16} color="#00C896" />
+      {/* ── Stats grid — elevado sobre el header ── */}
+      <div className="px-5 -mt-12">
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Ingresos', value: formatCurrency(income || monthlyIncome), color: '#16A34A', bg: '#DCFCE7', icon: '📈' },
+            { label: 'Gastos',   value: formatCurrency(expense),   color: '#DC2626', bg: '#FEF2F2', icon: '📉' },
+            { label: 'Disponible', value: formatCurrency(available), color: available >= 0 ? '#0891B2' : '#DC2626', bg: '#ECFEFF', icon: '💳' },
+            { label: 'Deudas',   value: formatCurrency(totalDebt), color: '#D97706', bg: '#FFFBEB', icon: '⚔️' },
+          ].map((s, i) => (
+            <div key={i} className="card-lg" style={{ border: `1px solid ${s.bg}` }}>
+              <div className="flex items-center justify-between mb-2">
+                <span style={{ fontSize: 20 }}>{s.icon}</span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
+                  {s.label}
+                </span>
+              </div>
+              <p style={{ color: s.color, fontWeight: 800, fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{s.value}</p>
             </div>
-            <span className="text-gray-700 font-semibold text-xs">+ Ingreso</span>
-          </Link>
-          <Link href="/transactions?type=expense"
-            className="card flex flex-col items-center gap-1.5 py-3 active:scale-95 transition-transform text-center">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(239,68,68,0.1)' }}>
-              <TrendingDown size={16} color="#EF4444" />
-            </div>
-            <span className="text-gray-700 font-semibold text-xs">- Gasto</span>
-          </Link>
-          <Link href="/budget"
-            className="flex flex-col items-center gap-1.5 py-3 active:scale-95 transition-transform text-center rounded-2xl"
-            style={{ background: 'linear-gradient(135deg, #7C3AED, #4F46E5)' }}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <Sword size={16} color="#FFFFFF" />
-            </div>
-            <span className="text-white font-semibold text-xs">Batalla</span>
-          </Link>
+          ))}
         </div>
       </div>
 
-      {/* Budget Health */}
-      <div className="px-5 mb-4">
-        <BudgetMini budgets={budgets} expenses={expense} />
-      </div>
+      <div className="px-5 mt-5 space-y-4">
 
-      {/* Insight */}
-      {expense > 0 && (
-        <div className="px-5 mb-5">
-          <div className="rounded-2xl p-4"
-            style={{ background: 'linear-gradient(135deg, rgba(167,139,250,0.08), rgba(167,139,250,0.04))', border: '1px solid rgba(167,139,250,0.2)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm">🤖</span>
-              <p className="text-purple-500 text-xs font-semibold">Insight</p>
+        {/* ── Misión activa ── */}
+        {activeMission ? (
+          <Link href="/debt-dungeon">
+            <div className="card-lg" style={{ border: '1.5px solid #FEF3C7', background: 'linear-gradient(135deg, #FFFBEB, #FFFFFF)' }}>
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                  style={{ background: '#FEF3C7', border: '2px solid #FDE68A' }}>
+                  {activeMission.boss_emoji || '🐉'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: '#FEE2E2', color: '#DC2626' }}>
+                      ⚔️ MISIÓN ACTIVA
+                    </span>
+                  </div>
+                  <p style={{ fontWeight: 800, fontSize: 15, color: '#111827' }}>
+                    Derrota a {activeMission.boss_name || activeMission.name}
+                  </p>
+                  <p style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>
+                    {formatCurrency(activeMission.balance)} restante
+                  </p>
+                  <div className="progress-track mt-3">
+                    <div className="progress-fill"
+                      style={{
+                        width: `${Math.max(5, ((activeMission.original_balance - activeMission.balance) / activeMission.original_balance) * 100)}%`,
+                        background: 'linear-gradient(90deg, #22C55E, #16A34A)',
+                      }} />
+                  </div>
+                  <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
+                    {Math.round(((activeMission.original_balance - activeMission.balance) / activeMission.original_balance) * 100)}% eliminado
+                  </p>
+                </div>
+                <ChevronRight size={18} color="#D97706" />
+              </div>
             </div>
-            <p className="text-gray-700 text-sm">
-              {balance > 0
-                ? `¡Vas bien! Llevas ${formatCurrency(balance)} de saldo positivo este mes. 🎉`
-                : `Tus gastos superan tus ingresos. Reduce gastos o agrega ingresos. 💡`}
-            </p>
+          </Link>
+        ) : (
+          <Link href="/debt-dungeon">
+            <div className="card-lg" style={{ border: '1.5px dashed #E5E7EB', textAlign: 'center' }}>
+              <div className="text-4xl mb-2">🗡️</div>
+              <p style={{ fontWeight: 700, color: '#374151' }}>Debt Dungeon</p>
+              <p style={{ color: '#6B7280', fontSize: 13, marginTop: 4 }}>Agrega una deuda para comenzar la batalla</p>
+            </div>
+          </Link>
+        )}
+
+        {/* ── Racha & companion ── */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card-lg flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl" style={{ background: '#FFF7ED' }}>
+              🔥
+            </div>
+            <div>
+              <p style={{ fontSize: 22, fontWeight: 900, color: '#F97316' }}>{profile?.streak || 0}</p>
+              <p style={{ fontSize: 12, color: '#6B7280' }}>Días en racha</p>
+            </div>
           </div>
+          <Link href="/companions" className="card-lg flex items-center gap-3">
+            <CompanionAvatar companionId={companionId} size={40} />
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{companion.name}</p>
+              <p style={{ fontSize: 11, color: companion.color, fontWeight: 600 }}>{companion.specialty}</p>
+            </div>
+          </Link>
         </div>
-      )}
 
-      {/* Recent Transactions */}
-      <div className="px-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-gray-900 font-bold">Últimos movimientos</h2>
-          <Link href="/transactions" className="text-brand-green text-sm font-medium">Ver todo</Link>
-        </div>
-
-        {recent.length === 0 ? (
-          <div className="card text-center py-8" style={{ border: '1.5px dashed rgba(0,200,150,0.35)' }}>
-            <p className="text-4xl mb-3">⚔️</p>
-            <p className="text-gray-700 font-medium">Misión pendiente</p>
-            <p className="text-brand-muted text-sm mt-1">
-              Registra tu primer movimiento del mes<br />
-              y gana <span style={{ color: '#00C896', fontWeight: 700 }}>+10 XP ⚡</span>
-            </p>
-            <Link href="/transactions" className="inline-block mt-4 px-6 py-2 rounded-xl font-semibold text-sm"
-              style={{ background: '#00C896', color: '#FFFFFF' }}>
-              Comenzar misión →
+        {/* ── Acciones rápidas ── */}
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>Acciones rápidas</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/transactions?type=income">
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #DCFCE7' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#DCFCE7' }}>
+                  <TrendingUp size={18} color="#16A34A" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Ingreso</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>+10 XP</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/transactions?type=expense">
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #FEE2E2' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#FEE2E2' }}>
+                  <TrendingDown size={18} color="#DC2626" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Gasto</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>+10 XP</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/goals">
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #EDE9FE' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#EDE9FE' }}>
+                  <Wallet size={18} color="#7C3AED" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Ahorrar</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>+25 XP</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/budget">
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #E0F2FE' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#E0F2FE' }}>
+                  <span style={{ fontSize: 18 }}>📊</span>
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Presupuesto</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>Ver gastos</p>
+                </div>
+              </div>
             </Link>
           </div>
-        ) : (
-          recent.map(t => <TransactionCard key={t.id} transaction={t} />)
-        )}
+        </div>
+
+        {/* ── Tip del compañero ── */}
+        <div className="card" style={{ background: `${companion.color}10`, border: `1.5px solid ${companion.color}30` }}>
+          <div className="flex items-start gap-3">
+            <CompanionAvatar companionId={companionId} size={36} />
+            <div>
+              <p style={{ fontWeight: 700, fontSize: 13, color: companion.color }}>💬 {companion.name} dice:</p>
+              <p style={{ fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.5 }}>{companion.tip}</p>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {xpFlash && <div className="xp-float">⚡ +10 XP</div>}
       <BottomNav />
     </div>
   )
