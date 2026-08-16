@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getUser, getTransactions, addTransaction, deleteTransaction, updateProfile, getProfile } from '@/lib/supabase'
+import { getUser, getTransactions, addTransaction, updateTransaction, deleteTransaction, updateProfile, getProfile } from '@/lib/supabase'
 import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { X, Trash2, Plus, TrendingUp, TrendingDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Trash2, Pencil, Plus, TrendingUp, TrendingDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Donut chart SVG simple
 function DonutChart({ data, total }) {
@@ -69,6 +69,7 @@ function TransactionsContent() {
   const [xpFlash, setXpFlash] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
+  const [editingTx, setEditingTx] = useState(null)
 
   const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
   const [selY, selM] = selectedMonth.split('-').map(Number)
@@ -92,11 +93,41 @@ function TransactionsContent() {
     load()
   }, [router, selectedMonth])
 
+  function openEdit(t) {
+    setEditingTx(t)
+    setType(t.type)
+    setAmount(String(t.amount))
+    setCategory(t.category)
+    setNote(t.note || '')
+    setDate(t.date)
+    setShowForm(true)
+    setSaveError('')
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditingTx(null)
+    setAmount('')
+    setNote('')
+    setSaveError('')
+  }
+
   async function handleAdd(e) {
     e.preventDefault()
     if (!amount || isNaN(amount) || Number(amount) <= 0) return
     setSaving(true)
     setSaveError('')
+
+    if (editingTx) {
+      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, note, date })
+      if (error) { setSaveError(error.message || 'Error al guardar.'); setSaving(false); return }
+      if (data && data[0]) {
+        setTransactions(prev => prev.map(t => t.id === editingTx.id ? data[0] : t))
+        closeForm()
+      }
+      setSaving(false)
+      return
+    }
 
     const { data, error } = await addTransaction({
       user_id: user.id,
@@ -117,10 +148,7 @@ function TransactionsContent() {
       const { data: profile } = await getProfile(user.id)
       if (profile) await updateProfile(user.id, { xp: (profile.xp || 0) + 10 })
       setTransactions(prev => [data[0], ...prev])
-      setAmount('')
-      setNote('')
-      setSaveError('')
-      setShowForm(false)
+      closeForm()
       setXpFlash(true)
       setTimeout(() => setXpFlash(false), 1400)
     }
@@ -295,13 +323,18 @@ function TransactionsContent() {
                           {CAT_LABELS[t.category] || t.category} · {t.date}
                         </p>
                       </div>
-                      <div className="text-right flex-shrink-0">
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <p style={{ fontWeight: 700, fontSize: 15, color: t.type === 'income' ? '#16A34A' : '#DC2626' }}>
                           {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                         </p>
-                        <button onClick={() => handleDelete(t.id)} className="mt-1">
-                          <Trash2 size={14} color="#D1D5DB" />
-                        </button>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <button onClick={() => openEdit(t)}>
+                            <Pencil size={14} color="#6B7280" />
+                          </button>
+                          <button onClick={() => handleDelete(t.id)}>
+                            <Trash2 size={14} color="#D1D5DB" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -322,12 +355,12 @@ function TransactionsContent() {
       {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 z-[200] flex items-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowForm(false); setSaveError('') }} />
+          <div className="absolute inset-0 bg-black/40" onClick={closeForm} />
           <div className="relative w-full rounded-t-3xl flex flex-col" style={{ background: '#FFFFFF', maxHeight: '92vh' }}>
 
             <div className="flex items-center justify-between px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Nuevo movimiento</h2>
-              <button onClick={() => { setShowForm(false); setSaveError('') }}
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{editingTx ? 'Editar movimiento' : 'Nuevo movimiento'}</h2>
+              <button onClick={closeForm}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ background: '#F3F4F6' }}>
                 <X size={18} color="#6B7280" />
@@ -407,7 +440,7 @@ function TransactionsContent() {
               {saveError && <p style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginBottom: 12, fontWeight: 600 }}>{saveError}</p>}
               <button form="txn-form" type="submit" disabled={saving} className="btn-primary"
                 style={{ background: type === 'income' ? '#22C55E' : '#EF4444', boxShadow: `0 4px 14px ${type === 'income' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}` }}>
-                {saving ? 'Guardando...' : `Guardar ${type === 'income' ? 'ingreso' : 'gasto'} ⚡ +10 XP`}
+                {saving ? 'Guardando...' : editingTx ? 'Guardar cambios' : `Guardar ${type === 'income' ? 'ingreso' : 'gasto'} ⚡ +10 XP`}
               </button>
             </div>
           </div>
