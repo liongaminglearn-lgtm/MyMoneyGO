@@ -80,6 +80,7 @@ body {
   border-radius: 18px;
   padding:       16px;
   box-shadow:    0 1px 4px rgba(0,0,0,0.05), 0 0 0 0 transparent;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================
@@ -201,6 +202,32 @@ input:focus, textarea:focus, select:focus {
    Si el dispositivo está en dark mode, igual
    forzamos nuestra paleta clara
    ============================================ */
+/* ============================================
+   XP REWARD ANIMATION
+   ============================================ */
+@keyframes xpFloat {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  60%  { opacity: 1; transform: translateX(-50%) translateY(-28px) scale(1.08); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-56px) scale(0.92); }
+}
+.xp-float {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  z-index: 300;
+  background: linear-gradient(135deg, #00C896, #00A67C);
+  color: #FFFFFF;
+  font-size: 17px;
+  font-weight: 900;
+  padding: 10px 24px;
+  border-radius: 50px;
+  pointer-events: none;
+  animation: xpFloat 1.4s ease-out forwards;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0,200,150,0.55);
+  letter-spacing: -0.01em;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: light;

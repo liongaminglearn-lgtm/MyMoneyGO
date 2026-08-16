@@ -211,15 +211,18 @@ export default function BillsPage() {
       {/* Bills list */}
       <div className="px-5 space-y-3">
         {loading ? (
-          <p className="text-brand-muted text-center py-8">Cargando...</p>
+          <p className="text-brand-muted text-center py-8">Revisando tus facturas...</p>
         ) : filtered.length === 0 ? (
-          <div className="card text-center py-10">
-            <p className="text-4xl mb-3">🧾</p>
+          <div className="card text-center py-10"
+            style={filter === 'all' ? { border: '1.5px dashed rgba(0,200,150,0.35)' } : {}}>
+            <p className="text-4xl mb-3">
+              {filter === 'all' ? '📋' : filter === 'paid' ? '⏳' : '🎉'}
+            </p>
             <p className="text-gray-800 font-semibold">
-              {filter === 'all' ? 'Sin facturas registradas' : filter === 'paid' ? 'Ninguna pagada aún' : '¡Todo pagado! 🎉'}
+              {filter === 'all' ? 'Misión: registra tus facturas' : filter === 'paid' ? 'Ninguna pagada aún' : '¡Todo pagado! 🎉'}
             </p>
             <p className="text-brand-muted text-sm mt-1">
-              {filter === 'all' && 'Agrega tus recibos fijos del mes'}
+              {filter === 'all' && 'Agrega tus recibos fijos y gana +5 XP por cada uno ⚡'}
             </p>
           </div>
         ) : (

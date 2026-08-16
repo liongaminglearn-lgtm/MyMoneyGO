@@ -142,7 +142,13 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="text-brand-muted text-sm">{getGreeting()} 👋</p>
-            <h1 className="text-gray-900 text-xl font-black">{profile?.name || 'Amigo'}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-gray-900 text-xl font-black">{profile?.name || 'Amigo'}</h1>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-lg"
+                style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED' }}>
+                Lv.{levelInfo.level} {levelInfo.level >= 5 ? '👑' : levelInfo.level >= 4 ? '🥇' : levelInfo.level >= 3 ? '🥈' : levelInfo.level >= 2 ? '🥉' : '🌱'}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
             style={{ background: '#FFF7ED', border: '1px solid #FED7AA' }}>
@@ -250,13 +256,16 @@ export default function DashboardPage() {
         </div>
 
         {recent.length === 0 ? (
-          <div className="card text-center py-8">
-            <Wallet size={32} color="#9CA3AF" className="mx-auto mb-3" />
-            <p className="text-gray-700 font-medium">Sin transacciones este mes</p>
-            <p className="text-brand-muted text-sm mt-1">Agrega tu primer movimiento</p>
+          <div className="card text-center py-8" style={{ border: '1.5px dashed rgba(0,200,150,0.35)' }}>
+            <p className="text-4xl mb-3">⚔️</p>
+            <p className="text-gray-700 font-medium">Misión pendiente</p>
+            <p className="text-brand-muted text-sm mt-1">
+              Registra tu primer movimiento del mes<br />
+              y gana <span style={{ color: '#00C896', fontWeight: 700 }}>+10 XP ⚡</span>
+            </p>
             <Link href="/transactions" className="inline-block mt-4 px-6 py-2 rounded-xl font-semibold text-sm"
-              style={{ background: 'rgba(0,200,150,0.1)', color: '#00C896' }}>
-              Agregar ahora +
+              style={{ background: '#00C896', color: '#FFFFFF' }}>
+              Comenzar misión →
             </Link>
           </div>
         ) : (

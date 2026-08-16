@@ -24,6 +24,7 @@ function TransactionsContent() {
   const [note, setNote] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [saving, setSaving] = useState(false)
+  const [xpFlash, setXpFlash] = useState(false)
 
   const currentMonth = getCurrentMonth()
 
@@ -62,6 +63,8 @@ function TransactionsContent() {
       setAmount('')
       setNote('')
       setShowForm(false)
+      setXpFlash(true)
+      setTimeout(() => setXpFlash(false), 1400)
     }
     setSaving(false)
   }
@@ -106,10 +109,13 @@ function TransactionsContent() {
         {loading ? (
           <p className="text-brand-muted text-center py-8">Cargando...</p>
         ) : transactions.length === 0 ? (
-          <div className="card text-center py-10">
-            <p className="text-4xl mb-3">💸</p>
-            <p className="text-gray-800 font-semibold">Sin movimientos este mes</p>
-            <p className="text-brand-muted text-sm mt-1">Agrega tu primer ingreso o gasto</p>
+          <div className="card text-center py-10" style={{ border: '1.5px dashed rgba(0,200,150,0.35)' }}>
+            <p className="text-4xl mb-3">⚔️</p>
+            <p className="text-gray-800 font-semibold">Misión pendiente</p>
+            <p className="text-brand-muted text-sm mt-1">
+              Registra tu primer movimiento del mes<br />
+              y gana <span style={{ color: '#00C896', fontWeight: 700 }}>+10 XP ⚡</span>
+            </p>
           </div>
         ) : (
           transactions.map(t => (
@@ -235,6 +241,7 @@ function TransactionsContent() {
         </div>
       )}
 
+      {xpFlash && <div className="xp-float">⚡ +10 XP ¡Guardado!</div>}
       <BottomNav />
     </div>
   )
@@ -242,7 +249,7 @@ function TransactionsContent() {
 
 export default function TransactionsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-green">Cargando...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-brand-dark flex items-center justify-center"><p className="text-brand-green font-black animate-pulse">Buscando tus movimientos...</p></div>}>
       <TransactionsContent />
     </Suspense>
   )

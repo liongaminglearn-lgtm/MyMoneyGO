@@ -167,7 +167,7 @@ export default function BudgetPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-        <div className="text-brand-green text-xl font-black animate-pulse">Cargando...</div>
+        <div className="text-brand-green text-xl font-black animate-pulse">Preparando la batalla...</div>
       </div>
     )
   }

@@ -47,7 +47,7 @@ export default function ProfilePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-      <p className="text-brand-green">Cargando...</p>
+      <p className="text-brand-green font-black animate-pulse">Cargando tu perfil de héroe...</p>
     </div>
   )
 
