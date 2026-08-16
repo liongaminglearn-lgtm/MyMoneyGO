@@ -6,7 +6,13 @@ import { getUser, getProfile, getTransactions, getDebts } from '@/lib/supabase'
 import { calculateLevel, getLevelProgress, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import CompanionAvatar, { COMPANIONS } from '@/components/ui/CompanionAvatar'
-import { Coins, Zap, Flame, ChevronRight, Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle } from 'lucide-react'
+import { Coins, Zap, Flame, ChevronRight, ChevronLeft, Plus, TrendingUp, TrendingDown, Wallet, AlertTriangle } from 'lucide-react'
+
+function offsetMonth(base, delta) {
+  const [y, m] = base.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -15,15 +21,17 @@ export default function DashboardPage() {
   const [debts, setDebts] = useState([])
   const [loading, setLoading] = useState(true)
   const [xpFlash, setXpFlash] = useState(false)
+  const [userId, setUserId] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      const month = getCurrentMonth()
+      setUserId(u.id)
       const [{ data: prof }, { data: txns }, { data: dts }] = await Promise.all([
         getProfile(u.id),
-        getTransactions(u.id, month),
+        getTransactions(u.id, selectedMonth),
         getDebts(u.id),
       ])
       setProfile(prof)
@@ -32,7 +40,12 @@ export default function DashboardPage() {
       setLoading(false)
     }
     load()
-  }, [router])
+  }, [router, selectedMonth])
+
+  async function changeMonth(delta) {
+    const newMonth = offsetMonth(selectedMonth, delta)
+    setSelectedMonth(newMonth)
+  }
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
@@ -56,8 +69,9 @@ export default function DashboardPage() {
   const activeMission = debts[0]
 
   const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-  const now = new Date()
-  const monthLabel = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`
+  const [selY, selM] = selectedMonth.split('-').map(Number)
+  const monthLabel = `${MONTHS_ES[selM - 1]} ${selY}`
+  const isCurrentMonth = selectedMonth === getCurrentMonth()
 
   return (
     <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
@@ -99,8 +113,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── Selector de mes ── */}
+      <div className="flex items-center justify-center gap-4 -mt-6 mb-2 relative z-10">
+        <button onClick={() => changeMonth(-1)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.9)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+          <ChevronLeft size={18} color="#374151" />
+        </button>
+        <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>{monthLabel}</span>
+        <button onClick={() => changeMonth(1)} disabled={isCurrentMonth} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: isCurrentMonth ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.9)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+          <ChevronRight size={18} color={isCurrentMonth ? '#9CA3AF' : '#374151'} />
+        </button>
+      </div>
+
       {/* ── Stats grid — elevado sobre el header ── */}
-      <div className="px-5 -mt-12">
+      <div className="px-5 -mt-6">
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'Ingresos', value: formatCurrency(income || monthlyIncome), color: '#16A34A', bg: '#DCFCE7', icon: '📈' },
