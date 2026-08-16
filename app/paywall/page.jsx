@@ -41,14 +41,11 @@ export default function PaywallPage() {
   async function handleStart() {
     setLoading(true)
     localStorage.removeItem('mmg_quiz')
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await updateProfile(user.id, { onboarding_complete: true })
-      router.push('/dashboard')
-    } else {
-      router.push('/auth/login')
-    }
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await updateProfile(user.id, { onboarding_complete: true })
+    } catch {}
+    router.push('/dashboard')
   }
 
   const features = [
