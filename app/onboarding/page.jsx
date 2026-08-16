@@ -37,12 +37,7 @@ export default function OnboardingPage() {
   const [loadPct, setLoadPct]         = useState(0)
   const [loadMsg, setLoadMsg]         = useState('Analizando tu situación financiera...')
 
-  // If already logged in → skip to dashboard
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.push('/dashboard')
-    })
-  }, [router])
+  // Auth redirect handled by middleware
 
   // Loading screen animation
   useEffect(() => {
