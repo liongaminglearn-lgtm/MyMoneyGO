@@ -40,13 +40,15 @@ export default function OnboardingPage() {
 
   // If already logged in → skip to dashboard
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        router.push('/dashboard')
-      } else {
-        setChecking(false)
-      }
-    })
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user) {
+          router.push('/dashboard')
+        } else {
+          setChecking(false)
+        }
+      })
+      .catch(() => setChecking(false))
   }, [router])
 
   // Loading screen animation
