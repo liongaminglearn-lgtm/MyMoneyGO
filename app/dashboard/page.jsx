@@ -262,6 +262,17 @@ export default function DashboardPage() {
                 </div>
               </div>
             </Link>
+            <Link href="/budget" className="col-span-2">
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #FEF9C3' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#FEF9C3' }}>
+                  <span style={{ fontSize: 18 }}>📊</span>
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Presupuesto</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>Gestionar límites por categoría</p>
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
 
