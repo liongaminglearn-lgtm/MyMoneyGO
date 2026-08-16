@@ -249,16 +249,22 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Tip del compañero ── */}
-        <div className="card" style={{ background: `${companion.color}10`, border: `1.5px solid ${companion.color}30` }}>
-          <div className="flex items-start gap-3">
-            <CompanionAvatar companionId={companionId} size={36} />
-            <div>
-              <p style={{ fontWeight: 700, fontSize: 13, color: companion.color }}>💬 {companion.name} dice:</p>
-              <p style={{ fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.5 }}>{companion.tip}</p>
+        {/* ── Tip del compañero → enlaza a Coach ── */}
+        <Link href="/coach">
+          <div className="card" style={{ background: `${companion.color}10`, border: `1.5px solid ${companion.color}30` }}>
+            <div className="flex items-start gap-3">
+              <CompanionAvatar companionId={companionId} size={36} />
+              <div className="flex-1">
+                <p style={{ fontWeight: 700, fontSize: 13, color: companion.color }}>💬 {companion.name} dice:</p>
+                <p style={{ fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.5 }}>{companion.tip}</p>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-xl flex-shrink-0"
+                style={{ background: companion.color + '20', alignSelf: 'center' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: companion.color }}>Ver Coach</span>
+              </div>
             </div>
           </div>
-        </div>
+        </Link>
 
       </div>
 
