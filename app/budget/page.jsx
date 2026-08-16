@@ -1,13 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getUser, getTransactions, getBudgets, upsertBudget } from '@/lib/supabase'
+import { getUser, getProfile, getTransactions, getBudgets, upsertBudget } from '@/lib/supabase'
 import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { ChevronLeft, Edit3, Check, X } from 'lucide-react'
 import Link from 'next/link'
 
-const EXPENSE_CATS = ['housing','food','transport','utilities','entertainment','education','health','clothing','other']
+const EXPENSE_CATS = ['housing','food','transport','utilities','health','entertainment','education','clothing','subscriptions','credit_card','debt','savings','other']
 
 export default function BudgetPage() {
   const router = useRouter()
@@ -18,6 +18,7 @@ export default function BudgetPage() {
   const [editing, setEditing] = useState(false)
   const [draftBudgets, setDraftBudgets] = useState({})
   const [saving, setSaving] = useState(false)
+  const [monthlyIncome, setMonthlyIncome] = useState(0)
 
   const month = getCurrentMonth()
   const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -29,11 +30,15 @@ export default function BudgetPage() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
       setUserId(u.id)
-      const [{ data: txns }, { data: bdgs }] = await Promise.all([
+      const [{ data: prof }, { data: txns }, { data: bdgs }] = await Promise.all([
+        getProfile(u.id),
         getTransactions(u.id, month),
         getBudgets(u.id, month),
       ])
-      setTransactions(txns || [])
+      const txList = txns || []
+      setTransactions(txList)
+      const incomeFromTxns = txList.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+      setMonthlyIncome(prof?.monthly_income || incomeFromTxns || 0)
       const budgetMap = {}
       ;(bdgs || []).forEach(b => { budgetMap[b.category] = b.amount })
       setBudgets(budgetMap)
@@ -59,6 +64,14 @@ export default function BudgetPage() {
 
   const totalBudgeted = Object.values(budgets).reduce((s, v) => s + Number(v), 0)
   const totalSpent = Object.values(spentMap).reduce((s, v) => s + v, 0)
+  const spentPct = monthlyIncome > 0 ? Math.round((totalSpent / monthlyIncome) * 100) : 0
+
+  // Regla 50/30/20
+  const rule = monthlyIncome > 0 ? {
+    needs:   Math.round(monthlyIncome * 0.50),
+    wants:   Math.round(monthlyIncome * 0.30),
+    savings: Math.round(monthlyIncome * 0.20),
+  } : null
 
   const cats = EXPENSE_CATS.map(id => {
     const cat = CATEGORIES.find(c => c.id === id)
@@ -107,6 +120,42 @@ export default function BudgetPage() {
             </button>
           )}
         </div>
+
+        {/* Banner % de ingresos */}
+        {!editing && monthlyIncome > 0 && (
+          <div className="mx-5 mb-3 rounded-2xl p-4" style={{
+            background: spentPct > 90 ? '#FEF2F2' : spentPct > 70 ? '#FFFBEB' : '#F0FDF4',
+            border: `1.5px solid ${spentPct > 90 ? '#FCA5A5' : spentPct > 70 ? '#FDE68A' : '#BBF7D0'}`,
+          }}>
+            <div className="flex items-center justify-between mb-2">
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
+                {monthLabel}: gastaste el <span style={{ color: spentPct > 90 ? '#DC2626' : spentPct > 70 ? '#D97706' : '#16A34A' }}>{spentPct}%</span> de tus ingresos
+              </p>
+              <span style={{ fontSize: 20 }}>{spentPct > 90 ? '🚨' : spentPct > 70 ? '⚠️' : '✅'}</span>
+            </div>
+            <div style={{ height: 6, background: '#E5E7EB', borderRadius: 99, overflow: 'hidden', marginBottom: 10 }}>
+              <div style={{ height: '100%', width: `${Math.min(100, spentPct)}%`, borderRadius: 99,
+                background: spentPct > 90 ? '#EF4444' : spentPct > 70 ? '#F97316' : '#22C55E' }} />
+            </div>
+            {rule && (
+              <div>
+                <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 700, marginBottom: 6 }}>REGLA 50 / 30 / 20</p>
+                <div className="flex gap-2">
+                  {[
+                    { label: '50% Necesidades', val: rule.needs, color: '#3B82F6' },
+                    { label: '30% Deseos',       val: rule.wants, color: '#8B5CF6' },
+                    { label: '20% Ahorro',        val: rule.savings, color: '#22C55E' },
+                  ].map(r => (
+                    <div key={r.label} className="flex-1 rounded-xl p-2 text-center" style={{ background: `${r.color}12` }}>
+                      <p style={{ fontSize: 9, color: r.color, fontWeight: 700 }}>{r.label}</p>
+                      <p style={{ fontSize: 12, fontWeight: 800, color: '#111827' }}>{formatCurrency(r.val)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Summary bar */}
         {!editing && (

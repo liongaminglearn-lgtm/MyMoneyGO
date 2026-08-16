@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getUser, getTransactions, addTransaction, updateTransaction, deleteTransaction, updateProfile, getProfile } from '@/lib/supabase'
-import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
+import { CATEGORIES, SUBCATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { X, Trash2, Pencil, Plus, TrendingUp, TrendingDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -70,6 +70,38 @@ function TransactionsContent() {
   const [saveError, setSaveError] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [editingTx, setEditingTx] = useState(null)
+  const [subcategory, setSubcategory] = useState('')
+  const [customSubcats, setCustomSubcats] = useState({})
+  const [showSubcatInput, setShowSubcatInput] = useState(false)
+  const [newSubcatInput, setNewSubcatInput] = useState('')
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mmg_custom_subcats') || '{}')
+      setCustomSubcats(stored)
+    } catch {}
+  }, [])
+
+  function saveCustomSubcats(updated) {
+    setCustomSubcats(updated)
+    localStorage.setItem('mmg_custom_subcats', JSON.stringify(updated))
+  }
+
+  function addCustomSubcat() {
+    const name = newSubcatInput.trim()
+    if (!name) return
+    const updated = { ...customSubcats, [category]: [...(customSubcats[category] || []), name] }
+    saveCustomSubcats(updated)
+    setSubcategory(name)
+    setNewSubcatInput('')
+    setShowSubcatInput(false)
+  }
+
+  function deleteCustomSubcat(name) {
+    const updated = { ...customSubcats, [category]: (customSubcats[category] || []).filter(s => s !== name) }
+    saveCustomSubcats(updated)
+    if (subcategory === name) setSubcategory('')
+  }
 
   const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
   const [selY, selM] = selectedMonth.split('-').map(Number)
@@ -98,6 +130,7 @@ function TransactionsContent() {
     setType(t.type)
     setAmount(String(t.amount))
     setCategory(t.category)
+    setSubcategory(t.subcategory || '')
     setNote(t.note || '')
     setDate(t.date)
     setShowForm(true)
@@ -109,6 +142,9 @@ function TransactionsContent() {
     setEditingTx(null)
     setAmount('')
     setNote('')
+    setSubcategory('')
+    setNewSubcatInput('')
+    setShowSubcatInput(false)
     setSaveError('')
   }
 
@@ -119,7 +155,7 @@ function TransactionsContent() {
     setSaveError('')
 
     if (editingTx) {
-      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, note, date })
+      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, subcategory, note, date })
       if (error) { setSaveError(error.message || 'Error al guardar.'); setSaving(false); return }
       if (data && data[0]) {
         setTransactions(prev => prev.map(t => t.id === editingTx.id ? data[0] : t))
@@ -134,6 +170,7 @@ function TransactionsContent() {
       type,
       amount: Number(amount),
       category,
+      subcategory,
       note,
       date,
     })
@@ -208,10 +245,15 @@ function TransactionsContent() {
     }))
 
   const incomeCategories = ['salary', 'freelance', 'other']
-  const expenseCategories = CATEGORIES.filter(c => !incomeCategories.includes(c.id))
+  const expenseCatIds = ['housing','food','transport','utilities','health','entertainment','education','clothing','subscriptions','credit_card','debt','savings','other']
   const filteredCats = type === 'income'
     ? CATEGORIES.filter(c => incomeCategories.includes(c.id))
-    : expenseCategories
+    : CATEGORIES.filter(c => expenseCatIds.includes(c.id))
+
+  const selectedCatInfo = CATEGORIES.find(c => c.id === category)
+  const predefinedSubcats = SUBCATEGORIES[category] || []
+  const customSubcatList = customSubcats[category] || []
+  const allSubcats = [...predefinedSubcats, ...customSubcatList]
 
   const CAT_LABELS = {
     housing: 'Vivienda', food: 'Comida', transport: 'Transporte',
@@ -320,7 +362,7 @@ function TransactionsContent() {
                           {t.note || cat?.name || 'Movimiento'}
                         </p>
                         <p style={{ fontSize: 12, color: '#6B7280' }}>
-                          {CAT_LABELS[t.category] || t.category} · {t.date}
+                          {CAT_LABELS[t.category] || t.category}{t.subcategory ? ` › ${t.subcategory}` : ''} · {t.date}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -418,6 +460,58 @@ function TransactionsContent() {
                     ))}
                   </div>
                 </div>
+
+                {allSubcats.length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                      Subcategoría <span style={{ fontWeight: 400 }}>(opcional)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {allSubcats.map(sc => {
+                        const isCustom = customSubcatList.includes(sc)
+                        const isSelected = subcategory === sc
+                        return (
+                          <div key={sc} className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-semibold cursor-pointer"
+                            style={{
+                              background: isSelected ? `${selectedCatInfo?.color || '#22C55E'}18` : '#F3F4F6',
+                              border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#22C55E') : '#E5E7EB'}`,
+                              color: isSelected ? (selectedCatInfo?.color || '#22C55E') : '#374151',
+                            }}
+                            onClick={() => setSubcategory(isSelected ? '' : sc)}>
+                            {sc}
+                            {isCustom && (
+                              <span onClick={e => { e.stopPropagation(); deleteCustomSubcat(sc) }}
+                                style={{ marginLeft: 4, color: '#9CA3AF', fontSize: 14, lineHeight: 1 }}>×</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {showSubcatInput ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            value={newSubcatInput}
+                            onChange={e => setNewSubcatInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSubcat())}
+                            placeholder="Nueva..."
+                            className="input-field"
+                            style={{ width: 110, padding: '4px 8px', fontSize: 13 }}
+                          />
+                          <button type="button" onClick={addCustomSubcat}
+                            style={{ color: '#22C55E', fontWeight: 800, fontSize: 18 }}>✓</button>
+                          <button type="button" onClick={() => { setShowSubcatInput(false); setNewSubcatInput('') }}
+                            style={{ color: '#9CA3AF', fontWeight: 800, fontSize: 18 }}>✕</button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => setShowSubcatInput(true)}
+                          className="rounded-xl px-3 py-1.5 text-sm font-semibold"
+                          style={{ background: '#F3F4F6', border: '1.5px dashed #D1D5DB', color: '#6B7280' }}>
+                          + Nueva
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Descripción (opcional)</label>
