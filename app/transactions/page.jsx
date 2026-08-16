@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { getUser, getTransactions, addTransaction, deleteTransaction, updateProfile, getProfile } from '@/lib/supabase'
 import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { X, Trash2, Plus, TrendingUp, TrendingDown, Download } from 'lucide-react'
+import { X, Trash2, Plus, TrendingUp, TrendingDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Donut chart SVG simple
 function DonutChart({ data, total }) {
@@ -65,23 +65,29 @@ function TransactionsContent() {
   const [saving, setSaving] = useState(false)
   const [xpFlash, setXpFlash] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
 
-  const currentMonth = getCurrentMonth()
   const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  const now = new Date()
-  const monthLabel = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`
+  const [selY, selM] = selectedMonth.split('-').map(Number)
+  const monthLabel = `${MONTHS_ES[selM - 1]} ${selY}`
+  const isCurrentMonth = selectedMonth === getCurrentMonth()
+
+  function offsetMonth(delta) {
+    const d = new Date(selY, selM - 1 + delta, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
       setUser(u)
-      const { data } = await getTransactions(u.id, currentMonth)
+      const { data } = await getTransactions(u.id, selectedMonth)
       setTransactions(data || [])
       setLoading(false)
     }
     load()
-  }, [router, currentMonth])
+  }, [router, selectedMonth])
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -190,8 +196,12 @@ function TransactionsContent() {
       <div className="px-5 pt-14 pb-4" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>Gastos</h1>
-            <p style={{ fontSize: 13, color: '#6B7280' }}>{monthLabel}</p>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>Movimientos</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <button onClick={() => setSelectedMonth(offsetMonth(-1))} style={{ color: '#6B7280', padding: '0 2px' }}><ChevronLeft size={16} /></button>
+              <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 600 }}>{monthLabel}</span>
+              <button onClick={() => setSelectedMonth(offsetMonth(1))} disabled={isCurrentMonth} style={{ color: isCurrentMonth ? '#D1D5DB' : '#6B7280', padding: '0 2px' }}><ChevronRight size={16} /></button>
+            </div>
           </div>
           <div className="flex gap-2">
             <button onClick={exportCSV}
