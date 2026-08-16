@@ -30,8 +30,7 @@ export default function RegisterPage() {
     } else {
       if (data.user) {
         const INCOME_MAP = {
-          'lt500': 400, '500-1500': 1000, '1500-3000': 2250,
-          '3000-5000': 4000, 'gt5000': 6000,
+          'u500': 300, '500': 750, '1000': 1750, '2500': 3750, '5000': 6000,
         }
         let quizData = {}
         try {
@@ -39,7 +38,7 @@ export default function RegisterPage() {
           if (raw) quizData = JSON.parse(raw)
         } catch {}
 
-        await supabase.from('profiles').upsert({
+        const { error: profileError } = await supabase.from('profiles').upsert({
           id: data.user.id,
           name,
           email,
@@ -53,6 +52,7 @@ export default function RegisterPage() {
           onboarding_complete: true,
         })
         localStorage.removeItem('mmg_quiz')
+        if (profileError) console.error('Profile upsert error:', profileError)
       }
       router.push('/paywall')
     }

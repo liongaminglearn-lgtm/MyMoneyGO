@@ -39,9 +39,15 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Rutas privadas sin sesión → login
+  const privateRoutes = ['/dashboard', '/budget', '/missions', '/goals', '/profile', '/coach', '/transactions', '/bills', '/debt-dungeon']
+  if (privateRoutes.some(r => pathname.startsWith(r)) && !user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
   return response
 }
 
 export const config = {
-  matcher: ['/', '/onboarding'],
+  matcher: ['/', '/onboarding', '/dashboard/:path*', '/budget/:path*', '/missions/:path*', '/goals/:path*', '/profile/:path*', '/coach/:path*', '/transactions/:path*', '/bills/:path*', '/debt-dungeon/:path*'],
 }
