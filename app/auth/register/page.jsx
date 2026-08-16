@@ -39,7 +39,7 @@ export default function RegisterPage() {
           if (raw) quizData = JSON.parse(raw)
         } catch {}
 
-        await supabase.from('profiles').insert([{
+        await supabase.from('profiles').upsert({
           id: data.user.id,
           name,
           email,
@@ -51,7 +51,7 @@ export default function RegisterPage() {
           monthly_income: INCOME_MAP[quizData.income] || 0,
           primary_goal: quizData.goal || 'control',
           onboarding_complete: true,
-        }])
+        })
         localStorage.removeItem('mmg_quiz')
       }
       router.push('/paywall')

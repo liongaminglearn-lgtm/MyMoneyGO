@@ -26,10 +26,6 @@ export default function DashboardPage() {
         getTransactions(u.id, month),
         getDebts(u.id),
       ])
-      if (prof && !prof.onboarding_complete) {
-        router.push('/onboarding')
-        return
-      }
       setProfile(prof)
       setTransactions(txns || [])
       setDebts(dts || [])

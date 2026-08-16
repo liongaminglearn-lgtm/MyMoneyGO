@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabase, updateProfile } from '@/lib/supabase'
 import CompanionAvatar, { COMPANIONS } from '@/components/ui/CompanionAvatar'
 import { CheckCircle2, Zap, Star, Shield } from 'lucide-react'
 
@@ -44,6 +44,7 @@ export default function PaywallPage() {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      await updateProfile(user.id, { onboarding_complete: true })
       router.push('/dashboard')
     } else {
       router.push('/auth/login')
