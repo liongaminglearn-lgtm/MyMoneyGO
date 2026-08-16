@@ -25,6 +25,7 @@ function TransactionsContent() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [saving, setSaving] = useState(false)
   const [xpFlash, setXpFlash] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const currentMonth = getCurrentMonth()
 
@@ -44,8 +45,9 @@ function TransactionsContent() {
     e.preventDefault()
     if (!amount || isNaN(amount) || Number(amount) <= 0) return
     setSaving(true)
+    setSaveError('')
 
-    const { data } = await addTransaction({
+    const { data, error } = await addTransaction({
       user_id: user.id,
       type,
       amount: Number(amount),
@@ -54,7 +56,13 @@ function TransactionsContent() {
       date,
     })
 
-    if (data) {
+    if (error) {
+      setSaveError(error.message || 'Error al guardar. Intenta de nuevo.')
+      setSaving(false)
+      return
+    }
+
+    if (data && data[0]) {
       const { data: profile } = await getProfile(user.id)
       if (profile) {
         await updateProfile(user.id, { xp: (profile.xp || 0) + 10 })
@@ -62,6 +70,7 @@ function TransactionsContent() {
       setTransactions(prev => [data[0], ...prev])
       setAmount('')
       setNote('')
+      setSaveError('')
       setShowForm(false)
       setXpFlash(true)
       setTimeout(() => setXpFlash(false), 1400)
@@ -135,7 +144,7 @@ function TransactionsContent() {
       {/* Add Transaction Modal */}
       {showForm && (
         <div className="fixed inset-0 z-[200] flex items-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowForm(false); setSaveError('') }} />
           <div className="relative w-full rounded-t-3xl flex flex-col"
             style={{ background: '#FFFFFF', maxHeight: '92vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 0px)' }}>
 
@@ -143,7 +152,7 @@ function TransactionsContent() {
             <div className="flex items-center justify-between px-6 pt-5 pb-3"
               style={{ borderBottom: '1px solid #F1F5F9' }}>
               <h2 className="text-gray-900 text-lg font-bold">Agregar movimiento</h2>
-              <button onClick={() => setShowForm(false)}
+              <button onClick={() => { setShowForm(false); setSaveError('') }}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ background: '#F1F5F9' }}>
                 <X size={18} color="#6B7280" />
@@ -229,6 +238,9 @@ function TransactionsContent() {
 
             {/* Sticky save button - always visible at bottom */}
             <div className="px-6 py-4" style={{ borderTop: '1px solid #F1F5F9' }}>
+              {saveError && (
+                <p className="text-red-500 text-sm mb-3 text-center font-medium">{saveError}</p>
+              )}
               <button
                 form="add-txn-form"
                 type="submit"
