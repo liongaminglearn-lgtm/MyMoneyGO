@@ -110,22 +110,22 @@ export default function DashboardPage() {
               <div style={{ height: '100%', width: `${progress}%`, background: '#FFFFFF', borderRadius: 99 }} />
             </div>
           </div>
+
+          {/* ── Selector de mes dentro del header ── */}
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <button onClick={() => changeMonth(-1)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+              <ChevronLeft size={18} color="#FFFFFF" />
+            </button>
+            <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: 16, letterSpacing: 0.5 }}>{monthLabel}</span>
+            <button onClick={() => changeMonth(1)} disabled={isCurrentMonth} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: isCurrentMonth ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+              <ChevronRight size={18} color={isCurrentMonth ? 'rgba(255,255,255,0.3)' : '#FFFFFF'} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Selector de mes ── */}
-      <div className="flex items-center justify-center gap-4 -mt-6 mb-2 relative z-10">
-        <button onClick={() => changeMonth(-1)} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.9)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-          <ChevronLeft size={18} color="#374151" />
-        </button>
-        <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>{monthLabel}</span>
-        <button onClick={() => changeMonth(1)} disabled={isCurrentMonth} className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: isCurrentMonth ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.9)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-          <ChevronRight size={18} color={isCurrentMonth ? '#9CA3AF' : '#374151'} />
-        </button>
-      </div>
-
       {/* ── Stats grid — elevado sobre el header ── */}
-      <div className="px-5 -mt-6">
+      <div className="px-5 -mt-12">
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'Ingresos', value: formatCurrency(income || monthlyIncome), color: '#16A34A', bg: '#DCFCE7', icon: '📈' },
