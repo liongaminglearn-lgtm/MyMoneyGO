@@ -182,6 +182,13 @@ export default function DashboardPage() {
                 </div>
                 <ChevronRight size={18} color="#D97706" />
               </div>
+              {debts.length > 1 && (
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid #FEF3C7' }}>
+                  <p style={{ fontSize: 12, color: '#D97706', fontWeight: 600, textAlign: 'center' }}>
+                    ⚔️ +{debts.length - 1} {debts.length - 1 === 1 ? 'deuda más' : 'deudas más'} esperando en el Dungeon
+                  </p>
+                </div>
+              )}
             </div>
           </Link>
         ) : (
