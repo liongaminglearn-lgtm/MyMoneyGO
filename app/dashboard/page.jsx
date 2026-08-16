@@ -263,6 +263,7 @@ export default function DashboardPage() {
           recent.map(t => <TransactionCard key={t.id} transaction={t} />)
         )}
       </div>
+      <BottomNav />
     </div>
   )
 }

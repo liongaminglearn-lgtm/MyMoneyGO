@@ -326,10 +326,10 @@ export default function BudgetPage() {
         const cat = EXPENSE_CATS.find(c => c.id === editCat)
         const spent = getSpentForCat(editCat)
         return (
-          <div className="fixed inset-0 z-50 flex items-end">
+          <div className="fixed inset-0 z-[200] flex items-end">
             <div className="absolute inset-0 bg-black/40" onClick={() => setEditCat(null)} />
-            <div className="relative w-full rounded-t-3xl safe-bottom"
-              style={{ background: '#FFFFFF' }}>
+            <div className="relative w-full rounded-t-3xl"
+              style={{ background: '#FFFFFF', paddingBottom: 'env(safe-area-inset-bottom)' }}>
               <div className="flex items-center justify-between px-6 pt-5 pb-4"
                 style={{ borderBottom: '1px solid #F1F5F9' }}>
                 <div className="flex items-center gap-3">

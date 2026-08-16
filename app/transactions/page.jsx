@@ -128,10 +128,10 @@ function TransactionsContent() {
 
       {/* Add Transaction Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end">
+        <div className="fixed inset-0 z-[200] flex items-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
-          <div className="relative w-full rounded-t-3xl flex flex-col safe-bottom"
-            style={{ background: '#FFFFFF', maxHeight: '92vh' }}>
+          <div className="relative w-full rounded-t-3xl flex flex-col"
+            style={{ background: '#FFFFFF', maxHeight: '92vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 0px)' }}>
 
             {/* Modal header - always visible */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3"

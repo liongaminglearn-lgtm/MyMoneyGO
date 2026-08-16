@@ -4,7 +4,7 @@
   "description": "Tu dinero. Tus metas. Tu futuro.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F1117",
+  "background_color": "#F0FDF9",
   "theme_color": "#00C896",
   "orientation": "portrait",
   "icons": [
