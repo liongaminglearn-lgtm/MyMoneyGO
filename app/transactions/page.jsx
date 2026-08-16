@@ -61,7 +61,10 @@ function TransactionsContent() {
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState(defaultType === 'income' ? 'salary' : 'food')
   const [note, setNote] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  })
   const [saving, setSaving] = useState(false)
   const [xpFlash, setXpFlash] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -391,6 +394,11 @@ function TransactionsContent() {
                 <div>
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Fecha</label>
                   <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                  {date && !date.startsWith(getCurrentMonth()) && (
+                    <p style={{ fontSize: 12, color: '#D97706', marginTop: 4, fontWeight: 600 }}>
+                      ⚠️ Esta fecha es de otro mes — aparecerá en {date.slice(0,7)} no en el mes actual
+                    </p>
+                  )}
                 </div>
               </form>
             </div>
