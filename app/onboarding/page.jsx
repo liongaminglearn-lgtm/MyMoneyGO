@@ -30,6 +30,7 @@ const TOTAL_QUIZ = 3 // preguntas reales (goal, companion, income)
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const [checking, setChecking]       = useState(true)
   const [step, setStep]               = useState(0)
   const [goal, setGoal]               = useState('')
   const [companion, setCompanion]     = useState('nova')
@@ -40,7 +41,11 @@ export default function OnboardingPage() {
   // If already logged in → skip to dashboard
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.push('/dashboard')
+      if (user) {
+        router.push('/dashboard')
+      } else {
+        setChecking(false)
+      }
     })
   }, [router])
 
@@ -70,6 +75,12 @@ export default function OnboardingPage() {
     }, 50)
     return () => clearInterval(interval)
   }, [step, goal, companion, income, router])
+
+  if (checking) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB' }}>
+      <div style={{ fontSize: 48 }} className="animate-bounce">🎮</div>
+    </div>
+  )
 
   const currentStep = STEPS[step]
   const quizStep = step - 1 // 0-indexed among quiz steps
