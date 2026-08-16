@@ -251,14 +251,14 @@ export default function DashboardPage() {
                 </div>
               </div>
             </Link>
-            <Link href="/budget">
+            <Link href="/transactions">
               <div className="card flex items-center gap-3" style={{ border: '1.5px solid #E0F2FE' }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#E0F2FE' }}>
-                  <span style={{ fontSize: 18 }}>📊</span>
+                  <span style={{ fontSize: 18 }}>📋</span>
                 </div>
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Presupuesto</p>
-                  <p style={{ fontSize: 11, color: '#6B7280' }}>Ver gastos</p>
+                  <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Movimientos</p>
+                  <p style={{ fontSize: 11, color: '#6B7280' }}>Ver historial</p>
                 </div>
               </div>
             </Link>

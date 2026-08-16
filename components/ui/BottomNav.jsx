@@ -1,14 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Sword, BarChart2, Target, User } from 'lucide-react'
+import { Home, Sword, List, Target, User } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: Home,       label: 'Inicio' },
-  { href: '/budget',    icon: BarChart2,  label: 'Presupuesto' },
-  { href: '/missions',  icon: Sword,      label: 'Misiones' },
-  { href: '/goals',     icon: Target,     label: 'Metas' },
-  { href: '/profile',   icon: User,       label: 'Perfil' },
+  { href: '/dashboard',    icon: Home,   label: 'Inicio' },
+  { href: '/transactions', icon: List,   label: 'Movimientos' },
+  { href: '/missions',     icon: Sword,  label: 'Misiones' },
+  { href: '/goals',        icon: Target, label: 'Metas' },
+  { href: '/profile',      icon: User,   label: 'Perfil' },
 ]
 
 export default function BottomNav() {
