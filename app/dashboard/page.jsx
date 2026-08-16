@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getUser, getProfile, updateProfile, getTransactions, getDebts } from '@/lib/supabase'
+import { getUser, getProfile, getTransactions, getDebts } from '@/lib/supabase'
 import { calculateLevel, getLevelProgress, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import CompanionAvatar, { COMPANIONS } from '@/components/ui/CompanionAvatar'
@@ -27,13 +27,8 @@ export default function DashboardPage() {
         getDebts(u.id),
       ])
       if (prof && !prof.onboarding_complete) {
-        // Skip onboarding for existing users who already have data
-        if ((prof.xp || 0) > 0 || (prof.monthly_income || 0) > 0) {
-          await updateProfile(u.id, { onboarding_complete: true })
-        } else {
-          router.push('/onboarding')
-          return
-        }
+        router.push('/onboarding')
+        return
       }
       setProfile(prof)
       setTransactions(txns || [])

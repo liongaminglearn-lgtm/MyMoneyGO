@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { signUp, supabase } from '@/lib/supabase'
+import { signUp, supabase, updateProfile } from '@/lib/supabase'
 import { Eye, EyeOff, DollarSign } from 'lucide-react'
 
 export default function RegisterPage() {
@@ -29,16 +29,32 @@ export default function RegisterPage() {
       setLoading(false)
     } else {
       if (data.user) {
+        const INCOME_MAP = {
+          'lt500': 400, '500-1500': 1000, '1500-3000': 2250,
+          '3000-5000': 4000, 'gt5000': 6000,
+        }
+        let quizData = {}
+        try {
+          const raw = localStorage.getItem('mmg_quiz')
+          if (raw) quizData = JSON.parse(raw)
+        } catch {}
+
         await supabase.from('profiles').insert([{
           id: data.user.id,
           name,
           email,
-          xp: 0,
+          xp: 50,
           streak: 0,
           level: 1,
+          coins: 100,
+          companion_id: quizData.companion || 'nova',
+          monthly_income: INCOME_MAP[quizData.income] || 0,
+          primary_goal: quizData.goal || 'control',
+          onboarding_complete: true,
         }])
+        localStorage.removeItem('mmg_quiz')
       }
-      router.push('/onboarding')
+      router.push('/paywall')
     }
   }
 

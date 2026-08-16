@@ -12,7 +12,7 @@ export default function Home() {
       if (user) {
         router.push('/dashboard')
       } else {
-        router.push('/auth/login')
+        router.push('/onboarding')
       }
     }
     checkAuth()
