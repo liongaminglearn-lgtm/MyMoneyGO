@@ -155,7 +155,7 @@ function TransactionsContent() {
     setSaveError('')
 
     if (editingTx) {
-      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, subcategory, note, date })
+      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, subcategory: subcategory || null, note: note || null, date })
       if (error) { setSaveError(error.message || 'Error al guardar.'); setSaving(false); return }
       if (data && data[0]) {
         setTransactions(prev => prev.map(t => t.id === editingTx.id ? data[0] : t))
@@ -170,8 +170,8 @@ function TransactionsContent() {
       type,
       amount: Number(amount),
       category,
-      subcategory,
-      note,
+      subcategory: subcategory || null,
+      note: note || null,
       date,
     })
 
