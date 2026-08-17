@@ -513,6 +513,66 @@ function TransactionsContent() {
                   </div>
                 )}
 
+                {/* Subcategoría */}
+                {allSubcats.length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>Subcategoría (opcional)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {allSubcats.map(sc => {
+                        const isCustom = customSubcatList.includes(sc)
+                        const isSelected = subcategory === sc
+                        return (
+                          <div key={sc} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                            <button type="button" onClick={() => setSubcategory(isSelected ? '' : sc)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
+                              style={{
+                                background: isSelected ? `${selectedCatInfo?.color || '#22C55E'}18` : '#F3F4F6',
+                                border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#22C55E') : '#E5E7EB'}`,
+                                color: isSelected ? (selectedCatInfo?.color || '#22C55E') : '#6B7280',
+                                paddingRight: isCustom ? 24 : undefined,
+                              }}>
+                              {sc}
+                            </button>
+                            {isCustom && (
+                              <button type="button"
+                                onClick={() => deleteCustomSubcat(sc)}
+                                style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#9CA3AF', fontSize: 14, fontWeight: 700 }}>
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {showSubcatInput ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            placeholder="Nueva..."
+                            value={newSubcatInput}
+                            onChange={e => setNewSubcatInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSubcat())}
+                            className="rounded-full px-3 py-1.5 text-sm font-semibold"
+                            style={{ border: '1.5px solid #E5E7EB', outline: 'none', width: 110 }}
+                            autoFocus
+                          />
+                          <button type="button" onClick={addCustomSubcat}
+                            className="w-7 h-7 rounded-full flex items-center justify-center"
+                            style={{ background: '#DCFCE7', color: '#16A34A', fontWeight: 800, fontSize: 16 }}>✓</button>
+                          <button type="button" onClick={() => { setShowSubcatInput(false); setNewSubcatInput('') }}
+                            className="w-7 h-7 rounded-full flex items-center justify-center"
+                            style={{ background: '#FEE2E2', color: '#DC2626', fontWeight: 800, fontSize: 16 }}>×</button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => setShowSubcatInput(true)}
+                          className="px-3 py-1.5 rounded-full text-sm font-semibold"
+                          style={{ border: '1.5px dashed #D1D5DB', color: '#9CA3AF', background: 'transparent' }}>
+                          + Nueva
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Descripción (opcional)</label>
                   <input className="input-field" placeholder="¿En qué fue?" value={note} onChange={e => setNote(e.target.value)} />
