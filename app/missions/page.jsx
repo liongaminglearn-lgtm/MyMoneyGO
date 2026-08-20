@@ -56,18 +56,28 @@ export default function MissionsPage() {
     setTimeout(() => setXpFlash(''), 1400)
   }
 
-  // Last 7 days chart
-  const todayStr = new Date().toISOString().split('T')[0]
-  const DAYS_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - (6 - i))
-    return { date: d.toISOString().split('T')[0], label: DAYS_ES[d.getDay()], total: 0 }
+  // Calendar data
+  const now = new Date()
+  const todayDay = now.getDate()
+  const calYear = now.getFullYear()
+  const calMonth = now.getMonth()
+  const daysInCalMonth = new Date(calYear, calMonth + 1, 0).getDate()
+  const firstWeekday = new Date(calYear, calMonth, 1).getDay()
+  const DAYS_ES_CAL = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const MONTHS_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+  const spendByDay = {}
+  transactions.filter(t => t.type === 'expense' && t.date?.startsWith(getCurrentMonth())).forEach(t => {
+    const day = parseInt(t.date.split('-')[2], 10)
+    spendByDay[day] = (spendByDay[day] || 0) + t.amount
   })
-  transactions.filter(t => t.type === 'expense').forEach(t => {
-    const entry = last7.find(d => d.date === t.date)
-    if (entry) entry.total += t.amount
-  })
-  const maxDaily = Math.max(...last7.map(d => d.total), 1)
+  const todaySpend = spendByDay[todayDay] || 0
+
+  function compactAmt(n) {
+    if (n >= 10000) return `$${(n / 1000).toFixed(0)}k`
+    if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`
+    return `$${Math.round(n)}`
+  }
 
   // Top categories current month
   const monthExpenses = transactions.filter(t => t.type === 'expense' && t.date?.startsWith(getCurrentMonth()))
@@ -222,49 +232,73 @@ export default function MissionsPage() {
         )}
       </div>
 
-      {/* ── Gastos por día (últimos 7 días) ── */}
+      {/* ── Calendario de gastos del mes ── */}
       <div className="px-5 mt-6">
-        <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>📅 Gastos por día</p>
+        <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>
+          📅 {MONTHS_FULL[calMonth]} {calYear}
+        </p>
         <div className="card-lg">
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 96 }}>
-            {last7.map((day, i) => {
-              const isToday = day.date === todayStr
-              const barH = Math.max(4, (day.total / maxDaily) * 72)
+          {/* Encabezados de día */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+            {DAYS_ES_CAL.map(d => (
+              <div key={d} style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: '#9CA3AF', paddingBottom: 2 }}>
+                {d}
+              </div>
+            ))}
+          </div>
+          {/* Celdas del calendario */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3 }}>
+            {Array.from({ length: firstWeekday }).map((_, i) => <div key={`e-${i}`} />)}
+            {Array.from({ length: daysInCalMonth }, (_, i) => i + 1).map(day => {
+              const isToday = day === todayDay
+              const isFuture = day > todayDay
+              const spend = spendByDay[day] || 0
               return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  {day.total > 0 && (
-                    <span style={{ fontSize: 8, color: '#9CA3AF', fontWeight: 600, letterSpacing: -0.3 }}>
-                      {formatCurrency(day.total).replace(/\$|\s/g, '').slice(0, 6)}
+                <div key={day} style={{
+                  padding: '5px 2px',
+                  borderRadius: 8,
+                  background: isToday ? '#059669' : spend > 0 ? '#FEF2F2' : 'transparent',
+                  textAlign: 'center',
+                  minHeight: 44,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <span style={{
+                    fontSize: 12,
+                    fontWeight: isToday ? 800 : 500,
+                    color: isToday ? '#FFFFFF' : isFuture ? '#D1D5DB' : '#374151',
+                    lineHeight: 1,
+                  }}>
+                    {day}
+                  </span>
+                  {spend > 0 && (
+                    <span style={{
+                      fontSize: 8,
+                      fontWeight: 700,
+                      color: isToday ? 'rgba(255,255,255,0.9)' : '#DC2626',
+                      marginTop: 2,
+                      lineHeight: 1.2,
+                    }}>
+                      {compactAmt(spend)}
                     </span>
                   )}
-                  <div style={{
-                    width: '100%',
-                    height: barH,
-                    background: isToday ? '#059669' : day.total > 0 ? '#A7F3D0' : '#F3F4F6',
-                    borderRadius: 6,
-                    marginTop: 'auto',
-                    transition: 'height 0.4s ease',
-                  }} />
-                  <span style={{ fontSize: 10, color: isToday ? '#059669' : '#9CA3AF', fontWeight: isToday ? 700 : 400 }}>
-                    {day.label}
-                  </span>
                 </div>
               )
             })}
           </div>
-          {last7.every(d => d.total === 0) && (
-            <p style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 8 }}>
-              Sin gastos en los últimos 7 días
-            </p>
-          )}
-          <div className="flex items-center gap-3 mt-4" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: 3, background: '#059669' }} />
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Hoy</span>
+          {/* Resumen de hoy */}
+          <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 14, paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>Hoy, {todayDay} de {MONTHS_FULL[calMonth]}</p>
+              <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{Object.keys(spendByDay).length} días con gastos este mes</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: 3, background: '#A7F3D0' }} />
-              <span style={{ fontSize: 11, color: '#6B7280' }}>Días anteriores</span>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, letterSpacing: 0.3 }}>GASTADO HOY</p>
+              <p style={{ fontSize: 22, fontWeight: 900, color: todaySpend > 0 ? '#DC2626' : '#9CA3AF', lineHeight: 1.2 }}>
+                {todaySpend > 0 ? formatCurrency(todaySpend) : '—'}
+              </p>
             </div>
           </div>
         </div>
