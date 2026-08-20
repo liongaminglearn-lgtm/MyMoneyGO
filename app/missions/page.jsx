@@ -33,6 +33,7 @@ export default function MissionsPage() {
   const [completed, setCompleted] = useState({})
   const [xpFlash, setXpFlash] = useState('')
   const [transactions, setTransactions] = useState([])
+  const [selectedCalDay, setSelectedCalDay] = useState(() => new Date().getDate())
 
   useEffect(() => {
     async function load() {
@@ -72,6 +73,10 @@ export default function MissionsPage() {
     spendByDay[day] = (spendByDay[day] || 0) + t.amount
   })
   const todaySpend = spendByDay[todayDay] || 0
+
+  const selectedDayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(selectedCalDay).padStart(2, '0')}`
+  const selectedDayTxns = transactions.filter(t => t.type === 'expense' && t.date === selectedDayStr)
+  const selectedDayTotal = spendByDay[selectedCalDay] || 0
 
   function compactAmt(n) {
     if (n >= 10000) return `$${(n / 1000).toFixed(0)}k`
@@ -251,24 +256,29 @@ export default function MissionsPage() {
             {Array.from({ length: firstWeekday }).map((_, i) => <div key={`e-${i}`} />)}
             {Array.from({ length: daysInCalMonth }, (_, i) => i + 1).map(day => {
               const isToday = day === todayDay
+              const isSelected = day === selectedCalDay
               const isFuture = day > todayDay
               const spend = spendByDay[day] || 0
               return (
-                <div key={day} style={{
-                  padding: '5px 2px',
-                  borderRadius: 8,
-                  background: isToday ? '#059669' : spend > 0 ? '#FEF2F2' : 'transparent',
-                  textAlign: 'center',
-                  minHeight: 44,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}>
+                <div key={day}
+                  onClick={() => setSelectedCalDay(day)}
+                  style={{
+                    padding: '5px 2px',
+                    borderRadius: 8,
+                    background: isToday ? '#059669' : isSelected ? '#ECFDF5' : spend > 0 ? '#FEF2F2' : 'transparent',
+                    border: isSelected && !isToday ? '1.5px solid #059669' : '1.5px solid transparent',
+                    textAlign: 'center',
+                    minHeight: 44,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}>
                   <span style={{
                     fontSize: 12,
-                    fontWeight: isToday ? 800 : 500,
-                    color: isToday ? '#FFFFFF' : isFuture ? '#D1D5DB' : '#374151',
+                    fontWeight: isToday || isSelected ? 800 : 500,
+                    color: isToday ? '#FFFFFF' : isSelected ? '#059669' : isFuture ? '#D1D5DB' : '#374151',
                     lineHeight: 1,
                   }}>
                     {day}
@@ -277,7 +287,7 @@ export default function MissionsPage() {
                     <span style={{
                       fontSize: 8,
                       fontWeight: 700,
-                      color: isToday ? 'rgba(255,255,255,0.9)' : '#DC2626',
+                      color: isToday ? 'rgba(255,255,255,0.9)' : isSelected ? '#059669' : '#DC2626',
                       marginTop: 2,
                       lineHeight: 1.2,
                     }}>
@@ -288,18 +298,50 @@ export default function MissionsPage() {
               )
             })}
           </div>
-          {/* Resumen de hoy */}
-          <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 14, paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>Hoy, {todayDay} de {MONTHS_FULL[calMonth]}</p>
-              <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{Object.keys(spendByDay).length} días con gastos este mes</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 700, letterSpacing: 0.3 }}>GASTADO HOY</p>
-              <p style={{ fontSize: 22, fontWeight: 900, color: todaySpend > 0 ? '#DC2626' : '#9CA3AF', lineHeight: 1.2 }}>
-                {todaySpend > 0 ? formatCurrency(todaySpend) : '—'}
+          {/* Detalle del día seleccionado */}
+          <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 14, paddingTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                  {selectedCalDay === todayDay ? '📍 Hoy' : `${selectedCalDay} de ${MONTHS_FULL[calMonth]}`}
+                </p>
+                <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
+                  {selectedDayTxns.length === 0 ? 'Sin gastos' : `${selectedDayTxns.length} ${selectedDayTxns.length === 1 ? 'gasto' : 'gastos'}`}
+                </p>
+              </div>
+              <p style={{ fontSize: 18, fontWeight: 900, color: selectedDayTotal > 0 ? '#DC2626' : '#9CA3AF' }}>
+                {selectedDayTotal > 0 ? formatCurrency(selectedDayTotal) : '—'}
               </p>
             </div>
+            {selectedDayTxns.length === 0 ? (
+              <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '8px 0' }}>
+                {selectedCalDay > todayDay ? 'Día futuro' : 'Sin gastos este día'}
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {selectedDayTxns.map(t => {
+                  const cat = CATEGORIES.find(c => c.id === t.category)
+                  return (
+                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cat?.color || '#9CA3AF'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
+                        {cat?.icon || '📦'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.note || cat?.name || 'Gasto'}
+                        </p>
+                        <p style={{ fontSize: 11, color: '#9CA3AF' }}>
+                          {cat?.name}{t.subcategory ? ` › ${t.subcategory}` : ''}
+                        </p>
+                      </div>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: '#DC2626', flexShrink: 0 }}>
+                        -{formatCurrency(t.amount)}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
