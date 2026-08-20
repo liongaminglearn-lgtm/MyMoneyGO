@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getUser, getProfile } from '@/lib/supabase'
-import { formatCurrency } from '@/lib/utils'
+import { getUser, getProfile, getTransactions } from '@/lib/supabase'
+import { formatCurrency, CATEGORIES, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { ChevronLeft, CheckCircle2, Lock } from 'lucide-react'
 
@@ -32,13 +32,18 @@ export default function MissionsPage() {
   const [activeTab, setActiveTab] = useState('daily')
   const [completed, setCompleted] = useState({})
   const [xpFlash, setXpFlash] = useState('')
+  const [transactions, setTransactions] = useState([])
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      const { data } = await getProfile(u.id)
-      setProfile(data)
+      const [{ data: prof }, { data: txns }] = await Promise.all([
+        getProfile(u.id),
+        getTransactions(u.id),
+      ])
+      setProfile(prof)
+      setTransactions(txns || [])
       setLoading(false)
     }
     load()
@@ -50,6 +55,33 @@ export default function MissionsPage() {
     setXpFlash(`+${mission.xp} XP`)
     setTimeout(() => setXpFlash(''), 1400)
   }
+
+  // Last 7 days chart
+  const todayStr = new Date().toISOString().split('T')[0]
+  const DAYS_ES = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+    return { date: d.toISOString().split('T')[0], label: DAYS_ES[d.getDay()], total: 0 }
+  })
+  transactions.filter(t => t.type === 'expense').forEach(t => {
+    const entry = last7.find(d => d.date === t.date)
+    if (entry) entry.total += t.amount
+  })
+  const maxDaily = Math.max(...last7.map(d => d.total), 1)
+
+  // Top categories current month
+  const monthExpenses = transactions.filter(t => t.type === 'expense' && t.date?.startsWith(getCurrentMonth()))
+  const totalMonthExp = monthExpenses.reduce((s, t) => s + t.amount, 0)
+  const catMap = {}
+  monthExpenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount })
+  const topCats = Object.entries(catMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([id, amt]) => ({
+      cat: CATEGORIES.find(c => c.id === id),
+      id, amt,
+      pct: totalMonthExp > 0 ? Math.round((amt / totalMonthExp) * 100) : 0,
+    }))
 
   const missionGroups = { daily: DAILY_MISSIONS, weekly: WEEKLY_MISSIONS, special: SPECIAL_MISSIONS }
   const currentMissions = missionGroups[activeTab] || []
@@ -188,6 +220,98 @@ export default function MissionsPage() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* ── Gastos por día (últimos 7 días) ── */}
+      <div className="px-5 mt-6">
+        <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>📅 Gastos por día</p>
+        <div className="card-lg">
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 96 }}>
+            {last7.map((day, i) => {
+              const isToday = day.date === todayStr
+              const barH = Math.max(4, (day.total / maxDaily) * 72)
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  {day.total > 0 && (
+                    <span style={{ fontSize: 8, color: '#9CA3AF', fontWeight: 600, letterSpacing: -0.3 }}>
+                      {formatCurrency(day.total).replace(/\$|\s/g, '').slice(0, 6)}
+                    </span>
+                  )}
+                  <div style={{
+                    width: '100%',
+                    height: barH,
+                    background: isToday ? '#059669' : day.total > 0 ? '#A7F3D0' : '#F3F4F6',
+                    borderRadius: 6,
+                    marginTop: 'auto',
+                    transition: 'height 0.4s ease',
+                  }} />
+                  <span style={{ fontSize: 10, color: isToday ? '#059669' : '#9CA3AF', fontWeight: isToday ? 700 : 400 }}>
+                    {day.label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          {last7.every(d => d.total === 0) && (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, marginTop: 8 }}>
+              Sin gastos en los últimos 7 días
+            </p>
+          )}
+          <div className="flex items-center gap-3 mt-4" style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: '#059669' }} />
+              <span style={{ fontSize: 11, color: '#6B7280' }}>Hoy</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: '#A7F3D0' }} />
+              <span style={{ fontSize: 11, color: '#6B7280' }}>Días anteriores</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Top categorías del mes ── */}
+      <div className="px-5 mt-5 mb-6">
+        <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>🏆 Top categorías del mes</p>
+        <div className="card-lg" style={{ gap: 0 }}>
+          {topCats.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '8px 0' }}>
+              Sin gastos registrados este mes
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {topCats.map((item, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>{item.cat?.icon || '📦'}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{item.cat?.name || item.id}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{formatCurrency(item.amt)}</span>
+                      <span style={{ fontSize: 11, color: '#9CA3AF', marginLeft: 4 }}>{item.pct}%</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${item.pct}%`,
+                      background: item.cat?.color || '#9CA3AF',
+                      borderRadius: 99,
+                      transition: 'width 0.5s ease',
+                    }} />
+                  </div>
+                </div>
+              ))}
+              {totalMonthExp > 0 && (
+                <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 12, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 600 }}>Total gastado</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalMonthExp)}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {xpFlash && <div className="xp-float">{xpFlash} ¡Misión!</div>}
