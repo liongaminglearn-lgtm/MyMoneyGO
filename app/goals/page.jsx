@@ -26,8 +26,8 @@ function MountainVisual({ pct }) {
           <stop offset="100%" stopColor="#F3F4F6" />
         </linearGradient>
         <linearGradient id="progress-green" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#22C55E" />
-          <stop offset="100%" stopColor="#16A34A" />
+          <stop offset="0%" stopColor="#059669" />
+          <stop offset="100%" stopColor="#047857" />
         </linearGradient>
       </defs>
       <rect width="260" height="120" fill="url(#sky)" />
@@ -36,7 +36,7 @@ function MountainVisual({ pct }) {
       {/* Snow cap */}
       <polygon points="130,8 100,45 160,45" fill="url(#snow)" />
       {/* Ground */}
-      <rect x="0" y="108" width="260" height="12" fill="#DCFCE7" rx="4"/>
+      <rect x="0" y="108" width="260" height="12" fill="#D1FAE5" rx="4"/>
       {/* Progress path */}
       {pct > 0 && (
         <line x1="130" y1="110" x2={130 - (100 * Math.min(pct, 1))} y2={110 - (102 * Math.min(pct, 1))}
@@ -141,7 +141,7 @@ export default function GoalsPage() {
   const EMOJIS = ['🎯','🏠','🚗','✈️','💍','🎓','💻','🏖️','🐶','💪','🏋️','🎸']
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* Header */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
@@ -159,8 +159,8 @@ export default function GoalsPage() {
           </div>
           <button onClick={() => setShowForm(true)}
             className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: '#DCFCE7' }}>
-            <Plus size={18} color="#16A34A" />
+            style={{ background: '#D1FAE5' }}>
+            <Plus size={18} color="#047857" />
           </button>
         </div>
 
@@ -171,7 +171,7 @@ export default function GoalsPage() {
               <button key={g.id} onClick={() => setSelectedGoal(g)}
                 className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
                 style={{
-                  background: selectedGoal?.id === g.id ? '#22C55E' : '#F3F4F6',
+                  background: selectedGoal?.id === g.id ? '#059669' : '#F3F4F6',
                   color: selectedGoal?.id === g.id ? '#FFFFFF' : '#374151',
                 }}>
                 {g.emoji} {g.name}
@@ -183,7 +183,7 @@ export default function GoalsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando tus metas...</p>
+          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando tus metas...</p>
         </div>
       ) : goals.length === 0 ? (
         <div className="px-5 mt-10 text-center">
@@ -210,14 +210,14 @@ export default function GoalsPage() {
             <MountainVisual pct={pct} />
             <div className="mt-4">
               <div className="flex justify-between items-center mb-2">
-                <span style={{ fontSize: 22, fontWeight: 900, color: '#16A34A' }}>{formatCurrency(goal.current_amount || 0)}</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: '#047857' }}>{formatCurrency(goal.current_amount || 0)}</span>
                 <span style={{ fontSize: 13, color: '#6B7280' }}>de {formatCurrency(goal.target_amount)}</span>
               </div>
               <div className="progress-track">
                 <div className="progress-fill"
-                  style={{ width: `${pctDisplay}%`, background: 'linear-gradient(90deg, #22C55E, #16A34A)' }} />
+                  style={{ width: `${pctDisplay}%`, background: 'linear-gradient(90deg, #059669, #047857)' }} />
               </div>
-              <p style={{ fontSize: 13, color: '#16A34A', fontWeight: 700, marginTop: 6 }}>{pctDisplay}% completado</p>
+              <p style={{ fontSize: 13, color: '#047857', fontWeight: 700, marginTop: 6 }}>{pctDisplay}% completado</p>
             </div>
           </div>
 
@@ -232,9 +232,9 @@ export default function GoalsPage() {
           )}
 
           {goal.current_amount >= goal.target_amount && (
-            <div className="card text-center" style={{ background: '#DCFCE7', border: '2px solid #22C55E' }}>
+            <div className="card text-center" style={{ background: '#D1FAE5', border: '2px solid #059669' }}>
               <p style={{ fontSize: 32, marginBottom: 8 }}>🏆</p>
-              <p style={{ fontSize: 18, fontWeight: 900, color: '#16A34A' }}>¡Meta alcanzada!</p>
+              <p style={{ fontSize: 18, fontWeight: 900, color: '#047857' }}>¡Meta alcanzada!</p>
               <p style={{ fontSize: 13, color: '#15803D', marginTop: 4 }}>Subiste a la cima. ¡Sigue escalando!</p>
             </div>
           )}
@@ -287,7 +287,7 @@ export default function GoalsPage() {
             </div>
             <input
               className="input-field"
-              style={{ fontSize: 28, fontWeight: 800, color: '#16A34A', marginBottom: 16 }}
+              style={{ fontSize: 28, fontWeight: 800, color: '#047857', marginBottom: 16 }}
               type="number" placeholder="0.00"
               value={depositAmt}
               onChange={e => setDepositAmt(e.target.value)}
@@ -317,7 +317,7 @@ export default function GoalsPage() {
                     {EMOJIS.map(e => (
                       <button key={e} type="button" onClick={() => setEmoji(e)}
                         className="text-2xl p-2 rounded-xl transition-all"
-                        style={{ background: emoji === e ? '#DCFCE7' : '#F3F4F6', border: `2px solid ${emoji === e ? '#22C55E' : 'transparent'}` }}>
+                        style={{ background: emoji === e ? '#D1FAE5' : '#F3F4F6', border: `2px solid ${emoji === e ? '#059669' : 'transparent'}` }}>
                         {e}
                       </button>
                     ))}

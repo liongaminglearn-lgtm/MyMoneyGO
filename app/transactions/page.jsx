@@ -43,7 +43,7 @@ function DonutChart({ data, total }) {
 const CATEGORY_COLORS = {
   housing: '#6366F1', food: '#F97316', transport: '#3B82F6',
   health: '#EF4444', entertainment: '#8B5CF6', education: '#EC4899',
-  savings: '#22C55E', salary: '#22C55E', freelance: '#06B6D4',
+  savings: '#059669', salary: '#059669', freelance: '#06B6D4',
   other: '#9CA3AF', debt: '#DC2626', clothing: '#F59E0B', utilities: '#14B8A6',
 }
 
@@ -263,7 +263,7 @@ function TransactionsContent() {
   }
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* Header */}
       <div className="px-5 pt-14 pb-4" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
@@ -285,7 +285,7 @@ function TransactionsContent() {
             </button>
             <button onClick={() => { setShowForm(true); setType('expense') }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm"
-              style={{ background: '#22C55E', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(34,197,94,0.35)' }}>
+              style={{ background: '#059669', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}>
               <Plus size={16} />
               Agregar
             </button>
@@ -298,16 +298,16 @@ function TransactionsContent() {
             <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>GASTO TOTAL</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalExp)}</p>
           </div>
-          <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#F0FDF4' }}>
+          <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#ECFDF5' }}>
             <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>DISPONIBLE</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color: available >= 0 ? '#16A34A' : '#DC2626' }}>{formatCurrency(available)}</p>
+            <p style={{ fontSize: 18, fontWeight: 800, color: available >= 0 ? '#047857' : '#DC2626' }}>{formatCurrency(available)}</p>
           </div>
         </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
+          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
         </div>
       ) : (
         <div className="px-5 mt-5 space-y-5">
@@ -343,7 +343,7 @@ function TransactionsContent() {
                 <p className="text-4xl mb-3">💳</p>
                 <p style={{ fontWeight: 600, color: '#374151' }}>Sin movimientos este mes</p>
                 <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>
-                  Registra tu primer movimiento<br />y gana <span style={{ color: '#22C55E', fontWeight: 700 }}>+10 XP ⚡</span>
+                  Registra tu primer movimiento<br />y gana <span style={{ color: '#059669', fontWeight: 700 }}>+10 XP ⚡</span>
                 </p>
               </div>
             ) : (
@@ -366,7 +366,7 @@ function TransactionsContent() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <p style={{ fontWeight: 700, fontSize: 15, color: t.type === 'income' ? '#16A34A' : '#DC2626' }}>
+                        <p style={{ fontWeight: 700, fontSize: 15, color: t.type === 'income' ? '#047857' : '#DC2626' }}>
                           {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -390,7 +390,7 @@ function TransactionsContent() {
       {/* FAB */}
       <button onClick={() => { setShowForm(true); setType('expense') }}
         className="fixed bottom-24 right-5 w-14 h-14 rounded-full flex items-center justify-center z-40"
-        style={{ background: '#22C55E', boxShadow: '0 4px 16px rgba(34,197,94,0.45)' }}>
+        style={{ background: '#059669', boxShadow: '0 4px 16px rgba(5,150,105,0.45)' }}>
         <Plus size={24} color="#FFFFFF" strokeWidth={3} />
       </button>
 
@@ -413,7 +413,7 @@ function TransactionsContent() {
               {/* Toggle */}
               <div className="flex rounded-2xl p-1 mb-5" style={{ background: '#F3F4F6' }}>
                 {[
-                  { id: 'income',  label: '+ Ingreso',  color: '#16A34A' },
+                  { id: 'income',  label: '+ Ingreso',  color: '#047857' },
                   { id: 'expense', label: '- Gasto',    color: '#DC2626' },
                 ].map(t => (
                   <button key={t.id}
@@ -434,7 +434,7 @@ function TransactionsContent() {
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Monto</label>
                   <input
                     className="input-field"
-                    style={{ fontSize: 28, fontWeight: 800, color: type === 'income' ? '#16A34A' : '#DC2626' }}
+                    style={{ fontSize: 28, fontWeight: 800, color: type === 'income' ? '#047857' : '#DC2626' }}
                     type="number"
                     placeholder="0.00"
                     value={amount}
@@ -451,7 +451,7 @@ function TransactionsContent() {
                       <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
                         className="flex flex-col items-center gap-1 p-2 rounded-2xl transition-all"
                         style={{
-                          background: category === cat.id ? `${cat.color}18` : '#F9FAFB',
+                          background: category === cat.id ? `${cat.color}18` : '#FFFFFF',
                           border: `1.5px solid ${category === cat.id ? cat.color : '#E5E7EB'}`,
                         }}>
                         <span style={{ fontSize: 22 }}>{cat.icon}</span>
@@ -473,9 +473,9 @@ function TransactionsContent() {
                         return (
                           <div key={sc} className="flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-semibold cursor-pointer"
                             style={{
-                              background: isSelected ? `${selectedCatInfo?.color || '#22C55E'}18` : '#F3F4F6',
-                              border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#22C55E') : '#E5E7EB'}`,
-                              color: isSelected ? (selectedCatInfo?.color || '#22C55E') : '#374151',
+                              background: isSelected ? `${selectedCatInfo?.color || '#059669'}18` : '#F3F4F6',
+                              border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#059669') : '#E5E7EB'}`,
+                              color: isSelected ? (selectedCatInfo?.color || '#059669') : '#374151',
                             }}
                             onClick={() => setSubcategory(isSelected ? '' : sc)}>
                             {sc}
@@ -498,7 +498,7 @@ function TransactionsContent() {
                             style={{ width: 110, padding: '4px 8px', fontSize: 13 }}
                           />
                           <button type="button" onClick={addCustomSubcat}
-                            style={{ color: '#22C55E', fontWeight: 800, fontSize: 18 }}>✓</button>
+                            style={{ color: '#059669', fontWeight: 800, fontSize: 18 }}>✓</button>
                           <button type="button" onClick={() => { setShowSubcatInput(false); setNewSubcatInput('') }}
                             style={{ color: '#9CA3AF', fontWeight: 800, fontSize: 18 }}>✕</button>
                         </div>
@@ -526,9 +526,9 @@ function TransactionsContent() {
                             <button type="button" onClick={() => setSubcategory(isSelected ? '' : sc)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
                               style={{
-                                background: isSelected ? `${selectedCatInfo?.color || '#22C55E'}18` : '#F3F4F6',
-                                border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#22C55E') : '#E5E7EB'}`,
-                                color: isSelected ? (selectedCatInfo?.color || '#22C55E') : '#6B7280',
+                                background: isSelected ? `${selectedCatInfo?.color || '#059669'}18` : '#F3F4F6',
+                                border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#059669') : '#E5E7EB'}`,
+                                color: isSelected ? (selectedCatInfo?.color || '#059669') : '#6B7280',
                                 paddingRight: isCustom ? 24 : undefined,
                               }}>
                               {sc}
@@ -557,7 +557,7 @@ function TransactionsContent() {
                           />
                           <button type="button" onClick={addCustomSubcat}
                             className="w-7 h-7 rounded-full flex items-center justify-center"
-                            style={{ background: '#DCFCE7', color: '#16A34A', fontWeight: 800, fontSize: 16 }}>✓</button>
+                            style={{ background: '#D1FAE5', color: '#047857', fontWeight: 800, fontSize: 16 }}>✓</button>
                           <button type="button" onClick={() => { setShowSubcatInput(false); setNewSubcatInput('') }}
                             className="w-7 h-7 rounded-full flex items-center justify-center"
                             style={{ background: '#FEE2E2', color: '#DC2626', fontWeight: 800, fontSize: 16 }}>×</button>
@@ -593,7 +593,7 @@ function TransactionsContent() {
             <div className="px-6 py-4" style={{ borderTop: '1px solid #F3F4F6' }}>
               {saveError && <p style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginBottom: 12, fontWeight: 600 }}>{saveError}</p>}
               <button form="txn-form" type="submit" disabled={saving} className="btn-primary"
-                style={{ background: type === 'income' ? '#22C55E' : '#EF4444', boxShadow: `0 4px 14px ${type === 'income' ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}` }}>
+                style={{ background: type === 'income' ? '#059669' : '#EF4444', boxShadow: `0 4px 14px ${type === 'income' ? 'rgba(5,150,105,0.35)' : 'rgba(239,68,68,0.35)'}` }}>
                 {saving ? 'Guardando...' : editingTx ? 'Guardar cambios' : `Guardar ${type === 'income' ? 'ingreso' : 'gasto'} ⚡ +10 XP`}
               </button>
             </div>
@@ -610,8 +610,8 @@ function TransactionsContent() {
 export default function TransactionsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
-        <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando movimientos...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFFFFF' }}>
+        <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando movimientos...</p>
       </div>
     }>
       <TransactionsContent />

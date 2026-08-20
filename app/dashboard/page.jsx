@@ -48,10 +48,10 @@ export default function DashboardPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFFFFF' }}>
       <div className="text-center">
         <div className="text-5xl mb-4 animate-bounce">🎮</div>
-        <p style={{ color: '#22C55E', fontWeight: 800 }} className="animate-pulse">Cargando tu aventura...</p>
+        <p style={{ color: '#059669', fontWeight: 800 }} className="animate-pulse">Cargando tu aventura...</p>
       </div>
     </div>
   )
@@ -74,7 +74,7 @@ export default function DashboardPage() {
   const isCurrentMonth = selectedMonth === getCurrentMonth()
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* ── Header con gradiente verde ── */}
       <div style={{ background: 'linear-gradient(145deg, #15803D 0%, #052E16 100%)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
@@ -128,7 +128,7 @@ export default function DashboardPage() {
       <div className="px-5 -mt-12">
         <div className="grid grid-cols-2 gap-3">
           {[
-            { label: 'Ingresos', value: formatCurrency(income || monthlyIncome), color: '#16A34A', bg: '#DCFCE7', icon: '📈' },
+            { label: 'Ingresos', value: formatCurrency(income || monthlyIncome), color: '#047857', bg: '#D1FAE5', icon: '📈' },
             { label: 'Gastos',   value: formatCurrency(expense),   color: '#DC2626', bg: '#FEF2F2', icon: '📉' },
             { label: 'Disponible', value: formatCurrency(available), color: available >= 0 ? '#0891B2' : '#DC2626', bg: '#ECFEFF', icon: '💳' },
             { label: 'Deudas',   value: formatCurrency(totalDebt), color: '#D97706', bg: '#FFFBEB', icon: '⚔️' },
@@ -173,7 +173,7 @@ export default function DashboardPage() {
                     <div className="progress-fill"
                       style={{
                         width: `${Math.max(5, ((activeMission.original_balance - activeMission.balance) / activeMission.original_balance) * 100)}%`,
-                        background: 'linear-gradient(90deg, #22C55E, #16A34A)',
+                        background: 'linear-gradient(90deg, #059669, #047857)',
                       }} />
                   </div>
                   <p style={{ color: '#6B7280', fontSize: 11, marginTop: 4 }}>
@@ -226,9 +226,9 @@ export default function DashboardPage() {
           <p style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 12 }}>Acciones rápidas</p>
           <div className="grid grid-cols-2 gap-3">
             <Link href="/transactions?type=income">
-              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #DCFCE7' }}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#DCFCE7' }}>
-                  <TrendingUp size={18} color="#16A34A" />
+              <div className="card flex items-center gap-3" style={{ border: '1.5px solid #D1FAE5' }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#D1FAE5' }}>
+                  <TrendingUp size={18} color="#047857" />
                 </div>
                 <div>
                   <p style={{ fontWeight: 700, fontSize: 13, color: '#111827' }}>Ingreso</p>

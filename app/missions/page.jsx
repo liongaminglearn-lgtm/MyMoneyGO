@@ -56,13 +56,13 @@ export default function MissionsPage() {
   const completedCount = currentMissions.filter(m => completed[m.id]).length
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
-      <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando misiones...</p>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFFFFF' }}>
+      <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando misiones...</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* Header */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
@@ -108,8 +108,8 @@ export default function MissionsPage() {
               onClick={() => setActiveTab(tab.id)}
               className="flex-1 py-3 text-sm font-bold transition-all"
               style={{
-                color: activeTab === tab.id ? '#22C55E' : '#6B7280',
-                borderBottom: activeTab === tab.id ? '2.5px solid #22C55E' : '2px solid transparent',
+                color: activeTab === tab.id ? '#059669' : '#6B7280',
+                borderBottom: activeTab === tab.id ? '2.5px solid #059669' : '2px solid transparent',
               }}>
               {tab.label}
             </button>
@@ -152,7 +152,7 @@ export default function MissionsPage() {
                     {isLocked ? (
                       <Lock size={18} color="#9CA3AF" />
                     ) : isDone ? (
-                      <CheckCircle2 size={22} color="#22C55E" />
+                      <CheckCircle2 size={22} color="#059669" />
                     ) : null}
                   </div>
 
@@ -163,7 +163,7 @@ export default function MissionsPage() {
                       <button
                         onClick={() => handleComplete(mission)}
                         className="ml-auto px-4 py-1.5 rounded-xl text-xs font-bold"
-                        style={{ background: '#22C55E', color: '#FFFFFF' }}>
+                        style={{ background: '#059669', color: '#FFFFFF' }}>
                         Completar
                       </button>
                     )}

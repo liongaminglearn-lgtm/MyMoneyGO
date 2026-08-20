@@ -82,7 +82,7 @@ export default function BudgetPage() {
   }).filter(c => c.spent > 0 || c.limit > 0 || editing)
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* Header */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
@@ -107,8 +107,8 @@ export default function BudgetPage() {
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: '#DCFCE7' }}>
-                <Check size={18} color="#16A34A" />
+                style={{ background: '#D1FAE5' }}>
+                <Check size={18} color="#047857" />
               </button>
             </div>
           ) : (
@@ -124,18 +124,18 @@ export default function BudgetPage() {
         {/* Banner % de ingresos */}
         {!editing && monthlyIncome > 0 && (
           <div className="mx-5 mb-3 rounded-2xl p-4" style={{
-            background: spentPct > 90 ? '#FEF2F2' : spentPct > 70 ? '#FFFBEB' : '#F0FDF4',
-            border: `1.5px solid ${spentPct > 90 ? '#FCA5A5' : spentPct > 70 ? '#FDE68A' : '#BBF7D0'}`,
+            background: spentPct > 90 ? '#FEF2F2' : spentPct > 70 ? '#FFFBEB' : '#ECFDF5',
+            border: `1.5px solid ${spentPct > 90 ? '#FCA5A5' : spentPct > 70 ? '#FDE68A' : '#A7F3D0'}`,
           }}>
             <div className="flex items-center justify-between mb-2">
               <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
-                {monthLabel}: gastaste el <span style={{ color: spentPct > 90 ? '#DC2626' : spentPct > 70 ? '#D97706' : '#16A34A' }}>{spentPct}%</span> de tus ingresos
+                {monthLabel}: gastaste el <span style={{ color: spentPct > 90 ? '#DC2626' : spentPct > 70 ? '#D97706' : '#047857' }}>{spentPct}%</span> de tus ingresos
               </p>
               <span style={{ fontSize: 20 }}>{spentPct > 90 ? '🚨' : spentPct > 70 ? '⚠️' : '✅'}</span>
             </div>
             <div style={{ height: 6, background: '#E5E7EB', borderRadius: 99, overflow: 'hidden', marginBottom: 10 }}>
               <div style={{ height: '100%', width: `${Math.min(100, spentPct)}%`, borderRadius: 99,
-                background: spentPct > 90 ? '#EF4444' : spentPct > 70 ? '#F97316' : '#22C55E' }} />
+                background: spentPct > 90 ? '#EF4444' : spentPct > 70 ? '#F97316' : '#059669' }} />
             </div>
             {rule && (
               <div>
@@ -144,7 +144,7 @@ export default function BudgetPage() {
                   {[
                     { label: '50% Necesidades', val: rule.needs, color: '#3B82F6' },
                     { label: '30% Deseos',       val: rule.wants, color: '#8B5CF6' },
-                    { label: '20% Ahorro',        val: rule.savings, color: '#22C55E' },
+                    { label: '20% Ahorro',        val: rule.savings, color: '#059669' },
                   ].map(r => (
                     <div key={r.label} className="flex-1 rounded-xl p-2 text-center" style={{ background: `${r.color}12` }}>
                       <p style={{ fontSize: 9, color: r.color, fontWeight: 700 }}>{r.label}</p>
@@ -160,9 +160,9 @@ export default function BudgetPage() {
         {/* Summary bar */}
         {!editing && (
           <div className="px-5 pb-4 flex gap-3">
-            <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#F0FDF4' }}>
+            <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#ECFDF5' }}>
               <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>PRESUPUESTO</p>
-              <p style={{ fontSize: 16, fontWeight: 800, color: '#16A34A' }}>{formatCurrency(totalBudgeted)}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, color: '#047857' }}>{formatCurrency(totalBudgeted)}</p>
             </div>
             <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#FEF2F2' }}>
               <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>GASTADO</p>
@@ -178,7 +178,7 @@ export default function BudgetPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
+          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
         </div>
       ) : (
         <div className="px-5 mt-5 space-y-3">
@@ -207,7 +207,7 @@ export default function BudgetPage() {
             const over = limit > 0 && spent > limit
             const near = !over && limit > 0 && pct >= 80
 
-            const barColor = over ? '#EF4444' : near ? '#F97316' : '#22C55E'
+            const barColor = over ? '#EF4444' : near ? '#F97316' : '#059669'
 
             return (
               <div key={id} className="card">

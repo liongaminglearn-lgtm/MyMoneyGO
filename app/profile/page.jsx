@@ -62,8 +62,8 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F9FAFB' }}>
-      <p style={{ color: '#22C55E', fontWeight: 700 }} className="animate-pulse">Cargando perfil...</p>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFFFFF' }}>
+      <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando perfil...</p>
     </div>
   )
 
@@ -86,10 +86,10 @@ export default function ProfilePage() {
   const avgDaily     = today > 0 ? totalExpense / today : 0
 
   return (
-    <div className="min-h-screen pb-28 page-transition" style={{ background: '#F9FAFB' }}>
+    <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
 
       {/* Hero header */}
-      <div style={{ background: 'linear-gradient(145deg, #8B5CF6, #6D28D9)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
+      <div style={{ background: 'linear-gradient(145deg, #059669, #047857)', paddingTop: 'max(20px, env(safe-area-inset-top))' }}>
         <div className="px-5 pt-2 pb-20">
           <div className="flex items-center justify-between">
             <h1 style={{ fontSize: 20, fontWeight: 900, color: '#FFFFFF' }}>Mi Perfil</h1>
@@ -106,7 +106,7 @@ export default function ProfilePage() {
       <div className="px-5 -mt-14 space-y-4">
 
         {/* Profile card */}
-        <div className="card-lg text-center" style={{ border: '2px solid #EDE9FE' }}>
+        <div className="card-lg text-center" style={{ border: '2px solid #D1FAE5' }}>
           <div className="flex justify-center mb-3">
             <CompanionAvatar companionId={companionId} size={72} showGlow />
           </div>
@@ -120,7 +120,7 @@ export default function ProfilePage() {
               <span style={{ color: '#9CA3AF' }}>{xp} XP</span>
             </div>
             <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #8B5CF6, #7C3AED)' }} />
+              <div className="progress-fill" style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #059669, #047857)' }} />
             </div>
             {levelInfo.next && (
               <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, textAlign: 'right' }}>
@@ -164,8 +164,8 @@ export default function ProfilePage() {
                 </button>
                 <button onClick={handleSaveSalary} disabled={savingSalary}
                   className="w-8 h-8 rounded-xl flex items-center justify-center"
-                  style={{ background: '#DCFCE7' }}>
-                  <Check size={14} color="#16A34A" />
+                  style={{ background: '#D1FAE5' }}>
+                  <Check size={14} color="#047857" />
                 </button>
               </div>
             )}
@@ -180,7 +180,7 @@ export default function ProfilePage() {
               inputMode="decimal"
             />
           ) : (
-            <p style={{ fontSize: 24, fontWeight: 900, color: '#22C55E' }}>
+            <p style={{ fontSize: 24, fontWeight: 900, color: '#059669' }}>
               {profile?.monthly_income ? formatCurrency(profile.monthly_income) : '—'}
             </p>
           )}
@@ -217,10 +217,10 @@ export default function ProfilePage() {
           <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 12 }}>📊 Estadísticas del mes</p>
           <div className="card-lg space-y-4">
             {[
-              { label: 'Ingresos registrados', value: formatCurrency(totalIncome), color: '#16A34A' },
+              { label: 'Ingresos registrados', value: formatCurrency(totalIncome), color: '#047857' },
               { label: 'Gastos registrados',   value: formatCurrency(totalExpense), color: '#DC2626' },
               { label: 'Gasto promedio diario', value: formatCurrency(avgDaily),   color: '#D97706' },
-              { label: 'Balance del mes',       value: formatCurrency(totalIncome - totalExpense), color: totalIncome >= totalExpense ? '#16A34A' : '#DC2626' },
+              { label: 'Balance del mes',       value: formatCurrency(totalIncome - totalExpense), color: totalIncome >= totalExpense ? '#047857' : '#DC2626' },
             ].map((s, i) => (
               <div key={i} className="flex items-center justify-between">
                 <p style={{ fontSize: 14, color: '#374151' }}>{s.label}</p>
