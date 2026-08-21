@@ -1,4 +1,5 @@
 import './globals.css'
+import Providers from './providers'
 
 export const metadata = {
   title: 'MyMoneyGo',
@@ -53,7 +54,7 @@ export default function RootLayout({ children }) {
         `}</style>
       </head>
       <body style={{ backgroundColor: '#FFFFFF', color: '#111827' }}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

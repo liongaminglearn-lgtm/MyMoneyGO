@@ -6,27 +6,29 @@ import { getUser, getProfile, getTransactions, getBudgets } from '@/lib/supabase
 import { formatCurrency, CATEGORIES, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { ChevronLeft, CheckCircle2, Lock, Download, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
-const DAILY_MISSIONS = [
-  { id: 'm1', icon: '💳', title: 'Registra un gasto hoy', desc: 'Anota cualquier gasto del día', xp: 15, coins: 5, type: 'daily' },
-  { id: 'm2', icon: '📊', title: 'Revisa tu presupuesto', desc: 'Visita la sección de presupuesto', xp: 10, coins: 3, type: 'daily' },
-  { id: 'm3', icon: '🎯', title: 'Actualiza una meta', desc: 'Agrega ahorro a una de tus metas', xp: 25, coins: 10, type: 'daily' },
+const DAILY_MISSIONS_KEYS = [
+  { id: 'm1', icon: '💳', titleKey: 'missions_daily_1_title', descKey: 'missions_daily_1_desc', xp: 15, coins: 5, type: 'daily' },
+  { id: 'm2', icon: '📊', titleKey: 'missions_daily_2_title', descKey: 'missions_daily_2_desc', xp: 10, coins: 3, type: 'daily' },
+  { id: 'm3', icon: '🎯', titleKey: 'missions_daily_3_title', descKey: 'missions_daily_3_desc', xp: 25, coins: 10, type: 'daily' },
 ]
 
-const WEEKLY_MISSIONS = [
-  { id: 'w1', icon: '⚔️', title: 'Ataca una deuda', desc: 'Haz un pago a cualquier deuda', xp: 50, coins: 20, type: 'weekly' },
-  { id: 'w2', icon: '📈', title: 'Semana en verde', desc: 'Gasta menos de lo que ingresaste', xp: 75, coins: 30, type: 'weekly' },
-  { id: 'w3', icon: '🔥', title: 'Racha de 7 días', desc: 'Mantén tu racha toda la semana', xp: 100, coins: 50, type: 'weekly' },
+const WEEKLY_MISSIONS_KEYS = [
+  { id: 'w1', icon: '⚔️', titleKey: 'missions_weekly_1_title', descKey: 'missions_weekly_1_desc', xp: 50, coins: 20, type: 'weekly' },
+  { id: 'w2', icon: '📈', titleKey: 'missions_weekly_2_title', descKey: 'missions_weekly_2_desc', xp: 75, coins: 30, type: 'weekly' },
+  { id: 'w3', icon: '🔥', titleKey: 'missions_weekly_3_title', descKey: 'missions_weekly_3_desc', xp: 100, coins: 50, type: 'weekly' },
 ]
 
-const SPECIAL_MISSIONS = [
-  { id: 's1', icon: '🏔️', title: 'Primer pico', desc: 'Completa el 50% de una meta de ahorro', xp: 200, coins: 100, type: 'special', locked: false },
-  { id: 's2', icon: '🐉', title: 'Caza-dragones', desc: 'Paga completamente una deuda', xp: 500, coins: 250, type: 'special', locked: false },
-  { id: 's3', icon: '👑', title: 'Maestro financiero', desc: 'Llega al Nivel 10', xp: 1000, coins: 500, type: 'special', locked: true },
+const SPECIAL_MISSIONS_KEYS = [
+  { id: 's1', icon: '🏔️', titleKey: 'missions_special_1_title', descKey: 'missions_special_1_desc', xp: 200, coins: 100, type: 'special', locked: false },
+  { id: 's2', icon: '🐉', titleKey: 'missions_special_2_title', descKey: 'missions_special_2_desc', xp: 500, coins: 250, type: 'special', locked: false },
+  { id: 's3', icon: '👑', titleKey: 'missions_special_3_title', descKey: 'missions_special_3_desc', xp: 1000, coins: 500, type: 'special', locked: true },
 ]
 
 export default function MissionsPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('daily')
@@ -195,13 +197,17 @@ export default function MissionsPage() {
     URL.revokeObjectURL(url)
   }
 
-  const missionGroups = { daily: DAILY_MISSIONS, weekly: WEEKLY_MISSIONS, special: SPECIAL_MISSIONS }
+  const missionGroups = {
+    daily:   DAILY_MISSIONS_KEYS.map(m => ({ ...m, title: t(m.titleKey), desc: t(m.descKey) })),
+    weekly:  WEEKLY_MISSIONS_KEYS.map(m => ({ ...m, title: t(m.titleKey), desc: t(m.descKey) })),
+    special: SPECIAL_MISSIONS_KEYS.map(m => ({ ...m, title: t(m.titleKey), desc: t(m.descKey) })),
+  }
   const currentMissions = missionGroups[activeTab] || []
   const completedCount = currentMissions.filter(m => completed[m.id]).length
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFFFFF' }}>
-      <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando misiones...</p>
+      <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('missions_loading')}</p>
     </div>
   )
 
@@ -218,7 +224,7 @@ export default function MissionsPage() {
               </div>
             </Link>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>Misiones</h1>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>{t('missions_title')}</h1>
               <p style={{ fontSize: 12, color: '#6B7280' }}>Completa misiones y gana XP</p>
             </div>
           </div>
@@ -243,9 +249,9 @@ export default function MissionsPage() {
         {/* Tabs */}
         <div className="flex px-5 pb-0 gap-0">
           {[
-            { id: 'daily',   label: 'Diarias' },
-            { id: 'weekly',  label: 'Semanales' },
-            { id: 'special', label: 'Especiales' },
+            { id: 'daily',   label: t('missions_tab_daily') },
+            { id: 'weekly',  label: t('missions_tab_weekly') },
+            { id: 'special', label: t('missions_tab_special') },
           ].map(tab => (
             <button
               key={tab.id}
@@ -308,7 +314,7 @@ export default function MissionsPage() {
                         onClick={() => handleComplete(mission)}
                         className="ml-auto px-4 py-1.5 rounded-xl text-xs font-bold"
                         style={{ background: '#059669', color: '#FFFFFF' }}>
-                        Completar
+                        {t('missions_claim')}
                       </button>
                     )}
                   </div>
@@ -490,11 +496,11 @@ export default function MissionsPage() {
       {/* ── Reporte mensual ── */}
       <div className="px-5 mt-5 mb-2">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>📋 Reporte del mes</p>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>📋 {t('missions_report_title')}</p>
           <button onClick={exportReport}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             <Download size={14} />
-            Descargar Excel
+            {t('missions_download')}
           </button>
         </div>
 
@@ -591,10 +597,10 @@ export default function MissionsPage() {
 
         {/* Gráfica de barras horizontales — ingresos vs gastos */}
         <div className="card-lg" style={{ marginBottom: 6 }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Ingresos vs Gastos</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>{t('missions_report_income')} vs {t('missions_report_expense')}</p>
           {[
-            { label: 'Ingresos', value: totalIncome, color: '#059669', max: Math.max(totalIncome, totalMonthExp, 1) },
-            { label: 'Gastos', value: totalMonthExp, color: '#EF4444', max: Math.max(totalIncome, totalMonthExp, 1) },
+            { label: t('missions_report_income'), value: totalIncome, color: '#059669', max: Math.max(totalIncome, totalMonthExp, 1) },
+            { label: t('missions_report_expense'), value: totalMonthExp, color: '#EF4444', max: Math.max(totalIncome, totalMonthExp, 1) },
           ].map(bar => (
             <div key={bar.label} style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -613,7 +619,7 @@ export default function MissionsPage() {
             </div>
           ))}
           <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, marginTop: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>Balance neto</span>
+            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>{t('missions_report_balance')}</span>
             <span style={{ fontSize: 14, fontWeight: 900, color: balance >= 0 ? '#047857' : '#DC2626' }}>
               {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
             </span>

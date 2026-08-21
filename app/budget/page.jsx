@@ -6,11 +6,13 @@ import { CATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { ChevronLeft, Edit3, Check, X } from 'lucide-react'
 import Link from 'next/link'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const EXPENSE_CATS = ['housing','food','transport','utilities','health','entertainment','education','clothing','subscriptions','credit_card','debt','savings','other']
 
 export default function BudgetPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [userId, setUserId] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [budgets, setBudgets] = useState({})
@@ -21,9 +23,9 @@ export default function BudgetPage() {
   const [monthlyIncome, setMonthlyIncome] = useState(0)
 
   const month = getCurrentMonth()
-  const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const MONTH_KEYS = ['month_jan','month_feb','month_mar','month_apr','month_may','month_jun','month_jul','month_aug','month_sep','month_oct','month_nov','month_dec']
   const now = new Date()
-  const monthLabel = `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`
+  const monthLabel = `${t(MONTH_KEYS[now.getMonth()])} ${now.getFullYear()}`
 
   useEffect(() => {
     async function load() {
@@ -97,7 +99,7 @@ export default function BudgetPage() {
               </div>
             </Link>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>Presupuesto</h1>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>{t('budget_title')}</h1>
               <p style={{ fontSize: 12, color: '#6B7280' }}>{monthLabel}</p>
             </div>
           </div>
@@ -119,7 +121,7 @@ export default function BudgetPage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
               style={{ background: '#F3F4F6', color: '#374151' }}>
               <Edit3 size={14} />
-              Editar
+              {t('edit')}
             </button>
           )}
         </div>
@@ -132,7 +134,7 @@ export default function BudgetPage() {
           }}>
             <div className="flex items-center justify-between mb-2">
               <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
-                {monthLabel}: gastaste el <span style={{ color: spentPct > 90 ? '#DC2626' : spentPct > 70 ? '#D97706' : '#047857' }}>{spentPct}%</span> de tus ingresos
+                {t('budget_spent_pct', monthLabel, spentPct)}
               </p>
               <span style={{ fontSize: 20 }}>{spentPct > 90 ? '🚨' : spentPct > 70 ? '⚠️' : '✅'}</span>
             </div>
@@ -142,12 +144,12 @@ export default function BudgetPage() {
             </div>
             {rule && (
               <div>
-                <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 700, marginBottom: 6 }}>REGLA 50 / 30 / 20</p>
+                <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 700, marginBottom: 6 }}>{t('budget_rule_label')}</p>
                 <div className="flex gap-2">
                   {[
-                    { label: '50% Necesidades', val: rule.needs, color: '#3B82F6' },
-                    { label: '30% Deseos',       val: rule.wants, color: '#8B5CF6' },
-                    { label: '20% Ahorro',        val: rule.savings, color: '#059669' },
+                    { label: t('budget_needs'),        val: rule.needs,   color: '#3B82F6' },
+                    { label: t('budget_wants'),        val: rule.wants,   color: '#8B5CF6' },
+                    { label: t('budget_savings_rule'), val: rule.savings, color: '#059669' },
                   ].map(r => (
                     <div key={r.label} className="flex-1 rounded-xl p-2 text-center" style={{ background: `${r.color}12` }}>
                       <p style={{ fontSize: 9, color: r.color, fontWeight: 700 }}>{r.label}</p>
@@ -164,15 +166,15 @@ export default function BudgetPage() {
         {!editing && (
           <div className="px-5 pb-4 flex gap-3">
             <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#ECFDF5' }}>
-              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>PRESUPUESTO</p>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>{t('budget_total_label')}</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: '#047857' }}>{formatCurrency(totalBudgeted)}</p>
             </div>
             <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#FEF2F2' }}>
-              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>GASTADO</p>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>{t('budget_spent_short')}</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalSpent)}</p>
             </div>
             <div className="flex-1 rounded-xl p-3 text-center" style={{ background: '#F0F9FF' }}>
-              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>RESTANTE</p>
+              <p style={{ fontSize: 10, color: '#6B7280', fontWeight: 600 }}>{t('budget_remaining_label')}</p>
               <p style={{ fontSize: 16, fontWeight: 800, color: '#0369A1' }}>{formatCurrency(totalBudgeted - totalSpent)}</p>
             </div>
           </div>
@@ -181,14 +183,14 @@ export default function BudgetPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
+          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('loading')}</p>
         </div>
       ) : (
         <div className="px-5 mt-5 space-y-3">
           {editing && (
             <div className="card" style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A' }}>
               <p style={{ fontSize: 13, color: '#92400E', fontWeight: 600 }}>
-                💡 Establece un límite de gasto para cada categoría
+                {t('budget_edit_hint')}
               </p>
             </div>
           )}
@@ -196,8 +198,8 @@ export default function BudgetPage() {
           {cats.length === 0 && !editing && (
             <div className="card text-center py-10" style={{ border: '1.5px dashed #E5E7EB' }}>
               <p className="text-4xl mb-3">📊</p>
-              <p style={{ fontWeight: 600, color: '#374151' }}>Sin datos aún</p>
-              <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>Registra gastos o edita los límites</p>
+              <p style={{ fontWeight: 600, color: '#374151' }}>{t('budget_no_data')}</p>
+              <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>{t('budget_no_data_desc')}</p>
             </div>
           )}
 
@@ -217,13 +219,13 @@ export default function BudgetPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span style={{ fontSize: 20 }}>{catInfo?.icon || '📦'}</span>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{catInfo?.name || id}</span>
-                    {over && <span className="chip chip-red text-xs">Excedido</span>}
+                    <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>{t('cat_' + id) || catInfo?.name || id}</span>
+                    {over && <span className="chip chip-red text-xs">{t('budget_over_chip')}</span>}
                   </div>
                   {editing ? (
                     <input
                       type="number"
-                      placeholder="Límite"
+                      placeholder={t('budget_limit_ph')}
                       value={draftBudgets[id] || ''}
                       onChange={e => setDraftBudgets(prev => ({ ...prev, [id]: e.target.value }))}
                       className="input-field text-right font-bold"
@@ -235,7 +237,7 @@ export default function BudgetPage() {
                       <p style={{ fontSize: 13, fontWeight: 700, color: over ? '#DC2626' : '#111827' }}>
                         {formatCurrency(spent)}
                       </p>
-                      {limit > 0 && <p style={{ fontSize: 11, color: '#9CA3AF' }}>de {formatCurrency(limit)}</p>}
+                      {limit > 0 && <p style={{ fontSize: 11, color: '#9CA3AF' }}>{t('budget_of')} {formatCurrency(limit)}</p>}
                     </div>
                   )}
                 </div>
@@ -251,7 +253,7 @@ export default function BudgetPage() {
                           {Math.round(pct)}%
                         </span>
                         <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-                          {over ? `−${formatCurrency(spent - limit)} excedido` : `${formatCurrency(limit - spent)} libre`}
+                          {over ? t('budget_excedido_by', formatCurrency(spent - limit)) : `${formatCurrency(limit - spent)} ${t('budget_libre')}`}
                         </span>
                       </div>
                     )}

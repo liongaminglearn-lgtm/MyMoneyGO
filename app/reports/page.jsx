@@ -5,6 +5,7 @@ import { getUser, getTransactions } from '@/lib/supabase'
 import { formatCurrency, CATEGORIES } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { Download, TrendingUp, TrendingDown, Wallet, Hash, ChevronLeft, ChevronDown } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 function toDateStr(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -44,14 +45,14 @@ function getPresetRange(preset) {
   return null
 }
 
-const PRESETS = [
-  { key: 'today',     label: 'Hoy' },
-  { key: 'week',      label: 'Esta semana' },
-  { key: 'month',     label: 'Este mes' },
-  { key: 'lastmonth', label: 'Mes pasado' },
-  { key: 'quarter',   label: '3 meses' },
-  { key: 'year',      label: 'Este año' },
-  { key: 'custom',    label: 'Personalizado' },
+const PRESET_KEYS = [
+  { key: 'today',     labelKey: 'reports_today' },
+  { key: 'week',      labelKey: 'reports_week' },
+  { key: 'month',     labelKey: 'reports_month' },
+  { key: 'lastmonth', labelKey: 'reports_last_month' },
+  { key: 'quarter',   labelKey: 'reports_3months' },
+  { key: 'year',      labelKey: 'reports_year' },
+  { key: 'custom',    labelKey: 'reports_custom' },
 ]
 
 const CAT_COLORS = {
@@ -91,6 +92,7 @@ function DonutChart({ segs, total }) {
 
 export default function ReportsPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [transactions, setTransactions] = useState([])
@@ -169,11 +171,11 @@ export default function ReportsPage() {
 
   const maxBar = Math.max(totalInc, totalExp, 1)
 
+  const MONTH_SHORT_KEYS = ['month_jan_s','month_feb_s','month_mar_s','month_apr_s','month_may_s','month_jun_s','month_jul_s','month_aug_s','month_sep_s','month_oct_s','month_nov_s','month_dec_s']
   function formatDateLabel(str) {
     if (!str) return ''
     const [y, m, d] = str.split('-')
-    const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-    return `${parseInt(d, 10)} ${MONTHS[parseInt(m, 10) - 1]} ${y}`
+    return `${parseInt(d, 10)} ${t(MONTH_SHORT_KEYS[parseInt(m, 10) - 1])} ${y}`
   }
 
   const periodLabel = fromDate === toDate
@@ -182,23 +184,23 @@ export default function ReportsPage() {
 
   function exportCSV() {
     const rows = []
-    rows.push([`REPORTE: ${periodLabel}`])
+    rows.push([`${t('reports_title').toUpperCase()}: ${periodLabel}`])
     rows.push([])
-    rows.push(['RESUMEN'])
-    rows.push(['Ingresos', totalInc])
-    rows.push(['Gastos', totalExp])
-    rows.push(['Balance', balance])
-    rows.push(['Transacciones', transactions.length])
+    rows.push([t('reports_balance_label')])
+    rows.push([t('income'), totalInc])
+    rows.push([t('expense'), totalExp])
+    rows.push([t('balance'), balance])
+    rows.push([t('reports_movements_label'), transactions.length])
     rows.push([])
-    rows.push(['TRANSACCIONES'])
-    rows.push(['Fecha', 'Tipo', 'Categoría', 'Subcategoría', 'Monto', 'Descripción'])
-    transactions.forEach(t => {
-      const cat = CATEGORIES.find(c => c.id === t.category)
-      rows.push([t.date, t.type === 'income' ? 'Ingreso' : 'Gasto', cat?.name || t.category, t.subcategory || '', t.amount, t.note || ''])
+    rows.push([t('reports_txn_list').toUpperCase()])
+    rows.push([t('date'), t('income') + '/' + t('expense'), t('category'), t('txn_form_subcategory'), t('amount'), t('notes')])
+    transactions.forEach(txn => {
+      const cat = CATEGORIES.find(c => c.id === txn.category)
+      rows.push([txn.date, txn.type === 'income' ? t('income') : t('expense'), cat?.name || txn.category, txn.subcategory || '', txn.amount, txn.note || ''])
     })
     rows.push([])
-    rows.push(['TOP CATEGORÍAS'])
-    rows.push(['Categoría', 'Monto', '% del total'])
+    rows.push([t('reports_top_cats').toUpperCase()])
+    rows.push([t('category'), t('amount'), '%'])
     topCats.forEach(c => rows.push([c.cat?.name || c.id, c.amt, c.pct]))
 
     const csvCell = v => {
@@ -231,10 +233,10 @@ export default function ReportsPage() {
             <button onClick={exportCSV}
               style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 12, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
               <Download size={14} />
-              Exportar
+              {t('reports_export')}
             </button>
           </div>
-          <h1 style={{ color: '#fff', fontWeight: 900, fontSize: 22, marginTop: 10 }}>📊 Reportes</h1>
+          <h1 style={{ color: '#fff', fontWeight: 900, fontSize: 22, marginTop: 10 }}>📊 {t('reports_title')}</h1>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 2 }}>{periodLabel}</p>
         </div>
       </div>
@@ -243,14 +245,14 @@ export default function ReportsPage() {
 
         {/* Preset chips */}
         <div style={{ overflowX: 'auto', display: 'flex', gap: 8, paddingTop: 16, paddingBottom: 4, scrollbarWidth: 'none' }}>
-          {PRESETS.map(p => (
+          {PRESET_KEYS.map(p => (
             <button key={p.key} onClick={() => applyPreset(p.key)}
               style={{
                 flexShrink: 0, padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
                 background: activePreset === p.key ? '#059669' : '#F3F4F6',
                 color: activePreset === p.key ? '#fff' : '#374151',
               }}>
-              {p.label}
+              {t(p.labelKey)}
             </button>
           ))}
         </div>
@@ -259,35 +261,35 @@ export default function ReportsPage() {
         {showCustom && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 12, padding: '12px', background: '#F9FAFB', borderRadius: 16, border: '1px solid #E5E7EB' }}>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Desde</p>
+              <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>{t('reports_from')}</p>
               <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1.5px solid #E5E7EB', fontSize: 14, background: '#fff', color: '#111827', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Hasta</p>
+              <p style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>{t('reports_to')}</p>
               <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
                 style={{ width: '100%', padding: '8px 10px', borderRadius: 10, border: '1.5px solid #E5E7EB', fontSize: 14, background: '#fff', color: '#111827', outline: 'none' }} />
             </div>
             <button onClick={applyCustom}
               style={{ flexShrink: 0, background: '#059669', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              Aplicar
+              {t('reports_apply')}
             </button>
           </div>
         )}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando datos...</p>
+            <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('loading')}</p>
           </div>
         ) : (
           <>
             {/* Summary cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 16 }}>
               {[
-                { icon: <TrendingUp size={18} color="#059669" />, label: 'INGRESOS', value: formatCurrency(totalInc), bg: '#ECFDF5', color: '#047857' },
-                { icon: <TrendingDown size={18} color="#DC2626" />, label: 'GASTOS', value: formatCurrency(totalExp), bg: '#FEF2F2', color: '#DC2626' },
-                { icon: <Wallet size={18} color={balance >= 0 ? '#059669' : '#DC2626'} />, label: 'BALANCE', value: formatCurrency(Math.abs(balance)), bg: balance >= 0 ? '#ECFDF5' : '#FEF2F2', color: balance >= 0 ? '#047857' : '#DC2626', extra: balance < 0 ? ' ↓' : ' ↑' },
-                { icon: <Hash size={18} color="#6366F1" />, label: 'MOVIMIENTOS', value: transactions.length, bg: '#EEF2FF', color: '#4338CA' },
+                { icon: <TrendingUp size={18} color="#059669" />, label: t('reports_income_label'), value: formatCurrency(totalInc), bg: '#ECFDF5', color: '#047857' },
+                { icon: <TrendingDown size={18} color="#DC2626" />, label: t('reports_expense_label'), value: formatCurrency(totalExp), bg: '#FEF2F2', color: '#DC2626' },
+                { icon: <Wallet size={18} color={balance >= 0 ? '#059669' : '#DC2626'} />, label: t('reports_balance_label'), value: formatCurrency(Math.abs(balance)), bg: balance >= 0 ? '#ECFDF5' : '#FEF2F2', color: balance >= 0 ? '#047857' : '#DC2626', extra: balance < 0 ? ' ↓' : ' ↑' },
+                { icon: <Hash size={18} color="#6366F1" />, label: t('reports_movements_label'), value: transactions.length, bg: '#EEF2FF', color: '#4338CA' },
               ].map((c, i) => (
                 <div key={i} style={{ background: c.bg, borderRadius: 18, padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {c.icon}
@@ -302,7 +304,7 @@ export default function ReportsPage() {
             {/* Donut + leyenda */}
             {topCats.length > 0 && (
               <div style={{ background: '#fff', borderRadius: 20, padding: '16px', marginTop: 16, border: '1px solid #F3F4F6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Distribución de gastos</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>{t('reports_distribution')}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <DonutChart segs={topCats} total={totalExp} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
@@ -322,10 +324,10 @@ export default function ReportsPage() {
 
             {/* Barras Ingresos vs Gastos */}
             <div style={{ background: '#fff', borderRadius: 20, padding: '16px', marginTop: 16, border: '1px solid #F3F4F6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Ingresos vs Gastos</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>{t('reports_income_vs_expense')}</p>
               {[
-                { label: 'Ingresos', value: totalInc, color: '#059669' },
-                { label: 'Gastos',   value: totalExp, color: '#EF4444' },
+                { label: t('income'), value: totalInc, color: '#059669' },
+                { label: t('expense'), value: totalExp, color: '#EF4444' },
               ].map(b => (
                 <div key={b.label} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -338,7 +340,7 @@ export default function ReportsPage() {
                 </div>
               ))}
               <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 600 }}>Balance neto</span>
+                <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 600 }}>{t('reports_net_balance')}</span>
                 <span style={{ fontSize: 15, fontWeight: 900, color: balance >= 0 ? '#047857' : '#DC2626' }}>
                   {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
                 </span>
@@ -348,7 +350,7 @@ export default function ReportsPage() {
             {/* Top categorías con barras */}
             {topCats.length > 0 && (
               <div style={{ background: '#fff', borderRadius: 20, padding: '16px', marginTop: 16, border: '1px solid #F3F4F6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Top categorías</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>{t('reports_top_cats')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {topCats.map((c, i) => (
                     <div key={i}>
@@ -369,7 +371,7 @@ export default function ReportsPage() {
                   ))}
                   {totalExp > 0 && (
                     <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>Total gastos</span>
+                      <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>{t('reports_total_expense')}</span>
                       <span style={{ fontSize: 14, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalExp)}</span>
                     </div>
                   )}
@@ -381,25 +383,25 @@ export default function ReportsPage() {
             {transactions.length > 0 && (
               <div style={{ background: '#fff', borderRadius: 20, padding: '16px', marginTop: 16, marginBottom: 8, border: '1px solid #F3F4F6', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Movimientos ({transactions.length})</p>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{t('reports_txn_list')} ({transactions.length})</p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {visibleTxns.map(t => {
-                    const cat = CATEGORIES.find(c => c.id === t.category)
-                    const isIncome = t.type === 'income'
+                  {visibleTxns.map(txn => {
+                    const cat = CATEGORIES.find(c => c.id === txn.category)
+                    const isIncome = txn.type === 'income'
                     return (
-                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div key={txn.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 38, height: 38, borderRadius: 12, background: `${cat?.color || '#9CA3AF'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                           {cat?.icon || '📦'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {t.note || cat?.name || (isIncome ? 'Ingreso' : 'Gasto')}
+                            {txn.note || cat?.name || (isIncome ? t('income') : t('expense'))}
                           </p>
-                          <p style={{ fontSize: 11, color: '#9CA3AF' }}>{t.date} · {cat?.name}</p>
+                          <p style={{ fontSize: 11, color: '#9CA3AF' }}>{txn.date} · {cat?.name}</p>
                         </div>
                         <p style={{ fontSize: 14, fontWeight: 800, color: isIncome ? '#059669' : '#DC2626', flexShrink: 0 }}>
-                          {isIncome ? '+' : '-'}{formatCurrency(t.amount)}
+                          {isIncome ? '+' : '-'}{formatCurrency(txn.amount)}
                         </p>
                       </div>
                     )
@@ -409,7 +411,7 @@ export default function ReportsPage() {
                   <button onClick={() => setShowAllTxns(v => !v)}
                     style={{ width: '100%', marginTop: 14, padding: '10px', borderRadius: 12, border: '1.5px solid #E5E7EB', background: '#F9FAFB', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <ChevronDown size={16} style={{ transform: showAllTxns ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                    {showAllTxns ? 'Mostrar menos' : `Ver ${transactions.length - 10} más`}
+                    {showAllTxns ? t('reports_show_less') : t('reports_see_more', transactions.length - 10)}
                   </button>
                 )}
               </div>
@@ -418,7 +420,7 @@ export default function ReportsPage() {
             {transactions.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 20px' }}>
                 <p style={{ fontSize: 36, marginBottom: 10 }}>📭</p>
-                <p style={{ color: '#6B7280', fontWeight: 600 }}>Sin movimientos en este período</p>
+                <p style={{ color: '#6B7280', fontWeight: 600 }}>{t('reports_no_period')}</p>
               </div>
             )}
           </>

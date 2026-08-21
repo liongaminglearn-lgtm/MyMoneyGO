@@ -10,6 +10,7 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { ChevronLeft, Plus, X, Mountain, Trash2, Sword, Check, Pencil, AlertCircle } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // ─── Mountain SVG ────────────────────────────────────────────────────────────
 function MountainVisual({ pct }) {
@@ -75,19 +76,20 @@ function getCatById(id) {
   return BILL_CATEGORIES.find(c => c.id === id) || BILL_CATEGORIES[BILL_CATEGORIES.length - 1]
 }
 
-function getDueBadge(dueDay) {
+function getDueBadge(dueDay, t) {
   const today = new Date().getDate()
   const diff = dueDay - today
-  if (diff < 0) return { label: 'Vencida', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
-  if (diff === 0) return { label: '¡Hoy!', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
+  if (diff < 0) return { label: t ? t('bills_due') : 'Overdue', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' }
+  if (diff === 0) return { label: t ? t('bills_due_today') : 'Today!', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
   if (diff <= 3) return { label: `${diff}d`, color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' }
-  return { label: `Día ${dueDay}`, color: '#6B7280', bg: 'rgba(107,114,128,0.1)' }
+  return { label: t ? t('bills_due_day', dueDay) : `Day ${dueDay}`, color: '#6B7280', bg: 'rgba(107,114,128,0.1)' }
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function GoalsPage() {
   const router = useRouter()
   const [tab, setTab] = useState('metas')
+  const { t } = useLanguage()
 
   // ── Auth ──
   const [userId, setUserId] = useState(null)
@@ -289,10 +291,10 @@ export default function GoalsPage() {
             </Link>
             <div>
               <h1 style={{ fontSize: 20, fontWeight: 900, color: '#111827' }}>
-                {tab === 'metas' ? 'Savings Mountain' : 'Facturas'}
+                {tab === 'metas' ? t('goals_title') : t('bills_title')}
               </h1>
               <p style={{ fontSize: 12, color: '#6B7280' }}>
-                {tab === 'metas' ? 'Tu camino al pico financiero' : 'Control de pagos mensuales'}
+                {tab === 'metas' ? t('goals_subtitle') : t('bills_subtitle')}
               </p>
             </div>
           </div>
@@ -307,8 +309,8 @@ export default function GoalsPage() {
         {/* ── Tabs ── */}
         <div className="flex gap-0 px-5 pb-0">
           {[
-            { id: 'metas', label: '🎯 Metas' },
-            { id: 'bills', label: '📋 Facturas' },
+            { id: 'metas', label: t('goals_tab_goals') },
+            { id: 'bills', label: t('goals_tab_bills') },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className="flex-1 py-2.5 text-sm font-bold transition-all"
@@ -345,17 +347,17 @@ export default function GoalsPage() {
 
           {goalsLoading ? (
             <div className="flex items-center justify-center py-20">
-              <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando tus metas...</p>
+              <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('goals_loading')}</p>
             </div>
           ) : goals.length === 0 ? (
             <div className="px-5 mt-10 text-center">
               <Mountain size={64} color="#D1D5DB" className="mx-auto mb-4" />
-              <p style={{ fontSize: 18, fontWeight: 800, color: '#374151' }}>Sin metas aún</p>
+              <p style={{ fontSize: 18, fontWeight: 800, color: '#374151' }}>{t('goals_empty_title')}</p>
               <p style={{ fontSize: 14, color: '#6B7280', marginTop: 8, marginBottom: 24 }}>
-                Crea tu primera meta y empieza a escalar la montaña
+                {t('goals_empty_desc')}
               </p>
               <button onClick={() => setShowGoalForm(true)} className="btn-primary" style={{ maxWidth: 240, margin: '0 auto' }}>
-                + Crear primera meta
+                {t('goals_empty_btn')}
               </button>
             </div>
           ) : goal && (
@@ -367,7 +369,7 @@ export default function GoalsPage() {
                   {goal.emoji} {goal.name}
                 </p>
                 <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 16 }}>
-                  Meta: {formatCurrency(goal.target_amount)}
+                  {t('goals_target')} {formatCurrency(goal.target_amount)}
                 </p>
                 <MountainVisual pct={pct} />
                 <div className="mt-4">
@@ -379,15 +381,14 @@ export default function GoalsPage() {
                     <div className="progress-fill"
                       style={{ width: `${pctDisplay}%`, background: 'linear-gradient(90deg, #059669, #047857)' }} />
                   </div>
-                  <p style={{ fontSize: 13, color: '#047857', fontWeight: 700, marginTop: 6 }}>{pctDisplay}% completado</p>
+                  <p style={{ fontSize: 13, color: '#047857', fontWeight: 700, marginTop: 6 }}>{t('goals_completed', pctDisplay)}</p>
                 </div>
               </div>
 
               {monthlyNeeded && goal.current_amount < goal.target_amount && (
                 <div className="card" style={{ background: '#EDE9FE', border: '1.5px solid #C4B5FD' }}>
                   <p style={{ fontSize: 13, color: '#5B21B6', lineHeight: 1.5 }}>
-                    💡 Si ahorras <strong>{formatCurrency(monthlyNeeded)}</strong>/mes,
-                    alcanzarás tu meta antes de la fecha límite.
+                    {t('goals_tip_save', formatCurrency(monthlyNeeded))}
                   </p>
                 </div>
               )}
@@ -395,14 +396,14 @@ export default function GoalsPage() {
               {goal.current_amount >= goal.target_amount && (
                 <div className="card text-center" style={{ background: '#D1FAE5', border: '2px solid #059669' }}>
                   <p style={{ fontSize: 32, marginBottom: 8 }}>🏆</p>
-                  <p style={{ fontSize: 18, fontWeight: 900, color: '#047857' }}>¡Meta alcanzada!</p>
-                  <p style={{ fontSize: 13, color: '#15803D', marginTop: 4 }}>Subiste a la cima. ¡Sigue escalando!</p>
+                  <p style={{ fontSize: 18, fontWeight: 900, color: '#047857' }}>{t('goals_reached_title')}</p>
+                  <p style={{ fontSize: 13, color: '#15803D', marginTop: 4 }}>{t('goals_reached_desc')}</p>
                 </div>
               )}
 
               {goal.current_amount < goal.target_amount && (
                 <button onClick={() => setShowDeposit(true)} className="btn-primary">
-                  💰 Agregar ahorro — +25 XP
+                  {t('goals_add_savings_btn')}
                 </button>
               )}
 
@@ -416,7 +417,7 @@ export default function GoalsPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold"
                 style={{ color: '#EF4444', background: '#FEF2F2' }}>
                 <Trash2 size={15} />
-                Eliminar meta
+                {t('goals_delete')}
               </button>
 
               <Link href="/debt-dungeon">
@@ -425,8 +426,8 @@ export default function GoalsPage() {
                     🐉
                   </div>
                   <div className="flex-1">
-                    <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>Debt Dungeon</p>
-                    <p style={{ fontSize: 12, color: '#6B7280' }}>Derrota tus deudas como jefes finales</p>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{t('goals_dungeon_title')}</p>
+                    <p style={{ fontSize: 12, color: '#6B7280' }}>{t('goals_dungeon_desc')}</p>
                   </div>
                   <Sword size={18} color="#EF4444" />
                 </div>
@@ -444,7 +445,7 @@ export default function GoalsPage() {
 
           {billsLoading ? (
             <div className="flex items-center justify-center py-20">
-              <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando facturas...</p>
+              <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('bills_loading')}</p>
             </div>
           ) : (
             <>
@@ -452,21 +453,21 @@ export default function GoalsPage() {
               <div className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}>
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 2 }}>Total mensual</p>
+                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 2 }}>{t('bills_monthly_total')}</p>
                     <p style={{ fontSize: 26, fontWeight: 900, color: '#FFFFFF' }}>{formatCurrency(totalMonthly)}</p>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '6px 12px', textAlign: 'center' }}>
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>Pagado</p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>{t('bills_paid')}</p>
                     <p style={{ fontSize: 16, fontWeight: 800, color: '#FFFFFF' }}>{progressPct}%</p>
                   </div>
                 </div>
                 <div className="flex gap-3 mb-3">
                   <div style={{ flex: 1, background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 10px' }}>
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Pagado</p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>{t('bills_paid')}</p>
                     <p style={{ fontSize: 14, fontWeight: 800, color: '#FFFFFF' }}>{formatCurrency(totalPaid)}</p>
                   </div>
                   <div style={{ flex: 1, background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 10px' }}>
-                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Pendiente</p>
+                    <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>{t('bills_pending')}</p>
                     <p style={{ fontSize: 14, fontWeight: 800, color: totalPending > 0 ? '#FDE68A' : '#FFFFFF' }}>{formatCurrency(totalPending)}</p>
                   </div>
                 </div>
@@ -478,9 +479,9 @@ export default function GoalsPage() {
               {/* Filter chips */}
               <div className="flex gap-2">
                 {[
-                  { id: 'all', label: 'Todas' },
-                  { id: 'pending', label: 'Pendientes' },
-                  { id: 'paid', label: 'Pagadas' },
+                  { id: 'all', label: t('bills_filter_all') },
+                  { id: 'pending', label: t('bills_filter_pending') },
+                  { id: 'paid', label: t('bills_filter_paid') },
                 ].map(f => (
                   <button key={f.id} onClick={() => setBillFilter(f.id)}
                     className="px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
@@ -497,12 +498,12 @@ export default function GoalsPage() {
               {bills.length === 0 && (
                 <div className="text-center py-10">
                   <p style={{ fontSize: 48, marginBottom: 12 }}>📋</p>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: '#374151' }}>Sin facturas registradas</p>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: '#374151' }}>{t('bills_empty_title')}</p>
                   <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6, marginBottom: 20 }}>
-                    Agrega tus pagos recurrentes para llevar el control
+                    {t('bills_empty_desc')}
                   </p>
                   <button onClick={openAddBill} className="btn-primary" style={{ maxWidth: 220, margin: '0 auto' }}>
-                    + Agregar factura
+                    {t('bills_empty_btn')}
                   </button>
                 </div>
               )}
@@ -510,7 +511,7 @@ export default function GoalsPage() {
               {/* Bills list */}
               {filteredBills.map(bill => {
                 const cat = getCatById(bill.category)
-                const badge = getDueBadge(bill.due_day)
+                const badge = getDueBadge(bill.due_day, t)
                 const toggling = togglingId === bill.id
                 return (
                   <div key={bill.id} className="card flex items-center gap-3"
@@ -537,7 +538,7 @@ export default function GoalsPage() {
                         </span>
                       </div>
                       <p style={{ fontSize: 12, color: '#6B7280' }}>
-                        {cat.name}{bill.company ? ` · ${bill.company}` : ''} · {FREQUENCY_LABELS[bill.frequency] || 'Mensual'}
+                        {t('bills_cat_' + cat.id)}{bill.company ? ` · ${bill.company}` : ''} · {t(bill.frequency) || t('monthly')}
                       </p>
                       {bill.payment_method && (
                         <p style={{ fontSize: 11, color: '#9CA3AF' }}>{bill.payment_method}</p>
@@ -584,7 +585,7 @@ export default function GoalsPage() {
                 <div className="card flex items-start gap-2" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                   <AlertCircle size={14} color="#059669" style={{ marginTop: 2, flexShrink: 0 }} />
                   <p style={{ fontSize: 12, color: '#065F46', lineHeight: 1.5 }}>
-                    Al marcar una factura como pagada se registra automáticamente el gasto en tus transacciones.
+                    {t('bills_auto_tip')}
                   </p>
                 </div>
               )}
@@ -599,7 +600,7 @@ export default function GoalsPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeposit(false)} />
           <div className="relative w-full rounded-t-3xl" style={{ background: '#FFFFFF', padding: 24 }}>
             <div className="flex items-center justify-between mb-5">
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Agregar ahorro</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{t('goals_deposit_title')}</h2>
               <button onClick={() => setShowDeposit(false)}><X size={20} color="#6B7280" /></button>
             </div>
             <input
@@ -611,7 +612,7 @@ export default function GoalsPage() {
               inputMode="decimal"
             />
             <button onClick={handleDeposit} disabled={savingDeposit || !depositAmt} className="btn-primary">
-              {savingDeposit ? 'Guardando...' : '💰 Guardar ahorro — +25 XP'}
+              {savingDeposit ? t('goals_deposit_saving') : t('goals_deposit_btn')}
             </button>
           </div>
         </div>
@@ -623,7 +624,7 @@ export default function GoalsPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowGoalForm(false)} />
           <div className="relative w-full rounded-t-3xl" style={{ background: '#FFFFFF', maxHeight: '90vh' }}>
             <div className="flex items-center justify-between px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>Nueva meta</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{t('goals_new_title')}</h2>
               <button onClick={() => setShowGoalForm(false)}><X size={20} color="#6B7280" /></button>
             </div>
             <div className="overflow-y-auto px-6 py-4">
@@ -645,18 +646,18 @@ export default function GoalsPage() {
                   <input className="input-field" placeholder="Ej: Vacaciones a París" value={goalName} onChange={e => setGoalName(e.target.value)} required />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Monto objetivo</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('goals_form_target')}</label>
                   <input className="input-field" type="number" placeholder="0.00" value={targetAmount} onChange={e => setTargetAmount(e.target.value)} inputMode="decimal" required />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Fecha límite (opcional)</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('goals_form_deadline')}</label>
                   <input className="input-field" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
                 </div>
               </form>
             </div>
             <div className="px-6 py-4" style={{ borderTop: '1px solid #F3F4F6' }}>
               <button form="goal-form" type="submit" disabled={savingGoal} className="btn-primary">
-                {savingGoal ? 'Creando...' : '🏔️ Crear meta'}
+                {savingGoal ? t('goals_form_saving') : t('goals_form_btn')}
               </button>
             </div>
           </div>
@@ -670,7 +671,7 @@ export default function GoalsPage() {
           <div className="relative w-full rounded-t-3xl" style={{ background: '#FFFFFF', maxHeight: '90vh' }}>
             <div className="flex items-center justify-between px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>
-                {editBill ? 'Editar factura' : 'Nueva factura'}
+                {editBill ? t('bills_edit_title') : t('bills_new_title')}
               </h2>
               <button onClick={() => setShowBillForm(false)}><X size={20} color="#6B7280" /></button>
             </div>
@@ -679,7 +680,7 @@ export default function GoalsPage() {
 
                 {/* Category grid */}
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>Categoría</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>{t('bills_form_category')}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {BILL_CATEGORIES.map(cat => (
                       <button key={cat.id} type="button" onClick={() => setBCategory(cat.id)}
@@ -689,19 +690,19 @@ export default function GoalsPage() {
                           border: `2px solid ${bCategory === cat.id ? cat.color : 'transparent'}`,
                         }}>
                         <span style={{ fontSize: 20 }}>{cat.icon}</span>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: bCategory === cat.id ? cat.color : '#6B7280' }}>{cat.name}</span>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: bCategory === cat.id ? cat.color : '#6B7280' }}>{t('bills_cat_' + cat.id)}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Nombre de la factura *</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('bills_form_name')} *</label>
                   <input className="input-field" placeholder="Ej: Internet fibra óptica" value={bName} onChange={e => setBName(e.target.value)} required />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Empresa / proveedor</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('bills_form_company')}</label>
                   <input className="input-field" placeholder="Ej: Claro, EPM, DirecTV" value={bCompany} onChange={e => setBCompany(e.target.value)} />
                 </div>
 
@@ -712,21 +713,21 @@ export default function GoalsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Día de pago</label>
+                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('bills_form_due_day')}</label>
                     <input className="input-field" type="number" min={1} max={31} value={bDueDay} onChange={e => setBDueDay(e.target.value)} />
                   </div>
                   <div>
-                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Frecuencia</label>
+                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('bills_form_frequency')}</label>
                     <select className="input-field" value={bFrequency} onChange={e => setBFrequency(e.target.value)}>
-                      {Object.entries(FREQUENCY_LABELS).map(([k, v]) => (
-                        <option key={k} value={k}>{v}</option>
+                      {Object.keys(FREQUENCY_LABELS).map(k => (
+                        <option key={k} value={k}>{t(k)}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Método de pago</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('bills_form_payment')}</label>
                   <div className="flex flex-wrap gap-2">
                     {PAYMENT_METHODS.map(m => (
                       <button key={m} type="button" onClick={() => setBPaymentMethod(m)}
@@ -743,13 +744,13 @@ export default function GoalsPage() {
 
                 <div>
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Notas</label>
-                  <input className="input-field" placeholder="Notas opcionales" value={bNotes} onChange={e => setBNotes(e.target.value)} />
+                  <input className="input-field" placeholder={t('bills_form_notes_ph')} value={bNotes} onChange={e => setBNotes(e.target.value)} />
                 </div>
               </form>
             </div>
             <div className="px-6 py-4" style={{ borderTop: '1px solid #F3F4F6' }}>
               <button form="bill-form" type="submit" disabled={savingBill} className="btn-primary">
-                {savingBill ? 'Guardando...' : editBill ? '✏️ Guardar cambios' : '📋 Agregar factura'}
+                {savingBill ? t('bills_form_saving') : editBill ? t('bills_form_btn_save') : t('bills_form_btn_add')}
               </button>
             </div>
           </div>

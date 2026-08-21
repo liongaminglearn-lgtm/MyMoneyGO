@@ -5,6 +5,7 @@ import { getUser, getTransactions, addTransaction, updateTransaction, deleteTran
 import { CATEGORIES, SUBCATEGORIES, formatCurrency, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
 import { X, Trash2, Pencil, Plus, TrendingUp, TrendingDown, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 // Donut chart SVG simple
 function DonutChart({ data, total }) {
@@ -49,6 +50,7 @@ const CATEGORY_COLORS = {
 
 function TransactionsContent() {
   const router = useRouter()
+  const { t } = useLanguage()
   const searchParams = useSearchParams()
   const defaultType = searchParams.get('type') || 'expense'
 
@@ -198,20 +200,14 @@ function TransactionsContent() {
   }
 
   function exportCSV() {
-    const CAT_LABELS_FULL = {
-      housing: 'Vivienda', food: 'Comida', transport: 'Transporte',
-      health: 'Salud', entertainment: 'Entretenimiento', education: 'Educación',
-      savings: 'Ahorro', salary: 'Salario', freelance: 'Freelance',
-      other: 'Otros', debt: 'Deudas', clothing: 'Ropa', utilities: 'Servicios',
-    }
     const rows = [
-      ['Fecha', 'Tipo', 'Categoría', 'Monto', 'Nota'],
-      ...transactions.map(t => [
-        t.date,
-        t.type === 'income' ? 'Ingreso' : 'Gasto',
-        CAT_LABELS_FULL[t.category] || t.category,
-        t.amount,
-        t.note || '',
+      [t('date'), t('txn_title'), t('category'), t('amount'), t('notes')],
+      ...transactions.map(txn => [
+        txn.date,
+        txn.type === 'income' ? t('income') : t('expense'),
+        t('cat_' + txn.category) || txn.category,
+        txn.amount,
+        txn.note || '',
       ])
     ]
     const csvCell = v => {
@@ -260,12 +256,6 @@ function TransactionsContent() {
   const customSubcatList = customSubcats[category] || []
   const allSubcats = [...predefinedSubcats, ...customSubcatList]
 
-  const CAT_LABELS = {
-    housing: 'Vivienda', food: 'Comida', transport: 'Transporte',
-    health: 'Salud', entertainment: 'Entrete.', education: 'Educación',
-    savings: 'Ahorro', salary: 'Salario', freelance: 'Freelance',
-    other: 'Otros', debt: 'Deudas', clothing: 'Ropa', utilities: 'Servicios',
-  }
 
   return (
     <div className="min-h-screen pb-28 page-transition" style={{ background: '#FFFFFF' }}>
@@ -274,7 +264,7 @@ function TransactionsContent() {
       <div className="px-5 pt-14 pb-4" style={{ background: '#FFFFFF', borderBottom: '1px solid #F3F4F6' }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>Movimientos</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{t('txn_title')}</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <button onClick={() => setSelectedMonth(offsetMonth(-1))} style={{ color: '#6B7280', padding: '0 2px' }}><ChevronLeft size={16} /></button>
               <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 600 }}>{monthLabel}</span>
@@ -286,13 +276,13 @@ function TransactionsContent() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm"
               style={{ background: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB' }}>
               <Download size={15} />
-              Excel
+              {t('txn_export')}
             </button>
             <button onClick={() => { setShowForm(true); setType('expense') }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm"
               style={{ background: '#059669', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}>
               <Plus size={16} />
-              Agregar
+              {t('add')}
             </button>
           </div>
         </div>
@@ -300,11 +290,11 @@ function TransactionsContent() {
         {/* Summary */}
         <div className="flex gap-3 mt-4">
           <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#FEF2F2' }}>
-            <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>GASTO TOTAL</p>
+            <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>{t('txn_total_expense')}</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: '#DC2626' }}>{formatCurrency(totalExp)}</p>
           </div>
           <div className="flex-1 rounded-2xl p-3 text-center" style={{ background: '#ECFDF5' }}>
-            <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>DISPONIBLE</p>
+            <p style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>{t('txn_available')}</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: available >= 0 ? '#047857' : '#DC2626' }}>{formatCurrency(available)}</p>
           </div>
         </div>
@@ -312,7 +302,7 @@ function TransactionsContent() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">Cargando...</p>
+          <p style={{ color: '#059669', fontWeight: 700 }} className="animate-pulse">{t('loading')}</p>
         </div>
       ) : (
         <div className="px-5 mt-5 space-y-5">
@@ -320,7 +310,7 @@ function TransactionsContent() {
           {/* Donut chart */}
           {chartData.length > 0 && (
             <div className="card-lg">
-              <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 16 }}>Distribución de gastos</p>
+              <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 16 }}>{t('txn_distribution')}</p>
               <div className="flex items-center gap-5">
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <DonutChart data={chartData} total={totalExp} />
@@ -330,7 +320,7 @@ function TransactionsContent() {
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: '#374151' }}>{CAT_LABELS[d.cat] || d.cat}</span>
+                        <span style={{ fontSize: 12, color: '#374151' }}>{t('cat_' + d.cat) || d.cat}</span>
                       </div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>{d.pct}%</span>
                     </div>
@@ -342,43 +332,43 @@ function TransactionsContent() {
 
           {/* Transactions list */}
           <div>
-            <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 12 }}>Transacciones recientes</p>
+            <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 12 }}>{t('txn_recent_list')}</p>
             {transactions.length === 0 ? (
               <div className="card text-center py-10" style={{ border: '1.5px dashed #E5E7EB' }}>
                 <p className="text-4xl mb-3">💳</p>
-                <p style={{ fontWeight: 600, color: '#374151' }}>Sin movimientos este mes</p>
+                <p style={{ fontWeight: 600, color: '#374151' }}>{t('txn_empty')}</p>
                 <p style={{ fontSize: 13, color: '#6B7280', marginTop: 6 }}>
-                  Registra tu primer movimiento<br />y gana <span style={{ color: '#059669', fontWeight: 700 }}>+10 XP ⚡</span>
+                  {t('txn_no_txns_first')}<br />y gana <span style={{ color: '#059669', fontWeight: 700 }}>+10 XP ⚡</span>
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
-                {transactions.map(t => {
-                  const cat = CATEGORIES.find(c => c.id === t.category)
-                  const color = CATEGORY_COLORS[t.category] || '#9CA3AF'
+                {transactions.map(txn => {
+                  const cat = CATEGORIES.find(c => c.id === txn.category)
+                  const color = CATEGORY_COLORS[txn.category] || '#9CA3AF'
                   return (
-                    <div key={t.id} className="card flex items-center gap-3">
+                    <div key={txn.id} className="card flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
                         style={{ background: `${color}15` }}>
                         {cat?.icon || '💰'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p style={{ fontWeight: 600, fontSize: 14, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {t.note || cat?.name || 'Movimiento'}
+                          {txn.note || t('cat_' + txn.category) || 'Movimiento'}
                         </p>
                         <p style={{ fontSize: 12, color: '#6B7280' }}>
-                          {CAT_LABELS[t.category] || t.category}{t.subcategory ? ` › ${t.subcategory}` : ''} · {t.date}
+                          {t('cat_' + txn.category) || txn.category}{txn.subcategory ? ` › ${txn.subcategory}` : ''} · {txn.date}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <p style={{ fontWeight: 700, fontSize: 15, color: t.type === 'income' ? '#047857' : '#DC2626' }}>
-                          {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                        <p style={{ fontWeight: 700, fontSize: 15, color: txn.type === 'income' ? '#047857' : '#DC2626' }}>
+                          {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount)}
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <button onClick={() => openEdit(t)}>
+                          <button onClick={() => openEdit(txn)}>
                             <Pencil size={14} color="#6B7280" />
                           </button>
-                          <button onClick={() => handleDelete(t.id)}>
+                          <button onClick={() => handleDelete(txn.id)}>
                             <Trash2 size={14} color="#D1D5DB" />
                           </button>
                         </div>
@@ -406,7 +396,7 @@ function TransactionsContent() {
           <div className="relative w-full rounded-t-3xl flex flex-col" style={{ background: '#FFFFFF', maxHeight: '92vh' }}>
 
             <div className="flex items-center justify-between px-6 pt-5 pb-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{editingTx ? 'Editar movimiento' : 'Nuevo movimiento'}</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827' }}>{editingTx ? t('txn_edit') : t('txn_new')}</h2>
               <button onClick={closeForm}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ background: '#F3F4F6' }}>
@@ -418,25 +408,25 @@ function TransactionsContent() {
               {/* Toggle */}
               <div className="flex rounded-2xl p-1 mb-5" style={{ background: '#F3F4F6' }}>
                 {[
-                  { id: 'income',  label: '+ Ingreso',  color: '#047857' },
-                  { id: 'expense', label: '- Gasto',    color: '#DC2626' },
-                ].map(t => (
-                  <button key={t.id}
-                    onClick={() => { setType(t.id); setCategory(t.id === 'income' ? 'salary' : 'food') }}
+                  { id: 'income',  label: t('txn_income_toggle'),  color: '#047857' },
+                  { id: 'expense', label: t('txn_expense_toggle'), color: '#DC2626' },
+                ].map(opt => (
+                  <button key={opt.id}
+                    onClick={() => { setType(opt.id); setCategory(opt.id === 'income' ? 'salary' : 'food') }}
                     className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
                     style={{
-                      background: type === t.id ? '#FFFFFF' : 'transparent',
-                      color: type === t.id ? t.color : '#9CA3AF',
-                      boxShadow: type === t.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                      background: type === opt.id ? '#FFFFFF' : 'transparent',
+                      color: type === opt.id ? opt.color : '#9CA3AF',
+                      boxShadow: type === opt.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                     }}>
-                    {t.label}
+                    {opt.label}
                   </button>
                 ))}
               </div>
 
               <form id="txn-form" onSubmit={handleAdd} className="space-y-4">
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Monto</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('amount')}</label>
                   <input
                     className="input-field"
                     style={{ fontSize: 28, fontWeight: 800, color: type === 'income' ? '#047857' : '#DC2626' }}
@@ -450,7 +440,7 @@ function TransactionsContent() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>Categoría</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>{t('category')}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {filteredCats.map(cat => (
                       <button key={cat.id} type="button" onClick={() => setCategory(cat.id)}
@@ -460,7 +450,7 @@ function TransactionsContent() {
                           border: `1.5px solid ${category === cat.id ? cat.color : '#E5E7EB'}`,
                         }}>
                         <span style={{ fontSize: 22 }}>{cat.icon}</span>
-                        <span style={{ fontSize: 10, color: '#6B7280', lineHeight: 1.2, textAlign: 'center' }}>{cat.name}</span>
+                        <span style={{ fontSize: 10, color: '#6B7280', lineHeight: 1.2, textAlign: 'center' }}>{t('cat_' + cat.id)}</span>
                       </button>
                     ))}
                   </div>
@@ -469,7 +459,7 @@ function TransactionsContent() {
                 {allSubcats.length > 0 && (
                   <div>
                     <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                      Subcategoría <span style={{ fontWeight: 400 }}>(opcional)</span>
+                      {t('txn_form_subcategory')} <span style={{ fontWeight: 400 }}>({t('optional')})</span>
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {allSubcats.map(sc => {
@@ -511,7 +501,7 @@ function TransactionsContent() {
                         <button type="button" onClick={() => setShowSubcatInput(true)}
                           className="rounded-xl px-3 py-1.5 text-sm font-semibold"
                           style={{ background: '#F3F4F6', border: '1.5px dashed #D1D5DB', color: '#6B7280' }}>
-                          + Nueva
+                          {t('txn_new_subcat')}
                         </button>
                       )}
                     </div>
@@ -520,16 +510,16 @@ function TransactionsContent() {
 
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Descripción (opcional)</label>
-                  <input className="input-field" placeholder="¿En qué fue?" value={note} onChange={e => setNote(e.target.value)} />
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('txn_form_desc')}</label>
+                  <input className="input-field" placeholder={t('txn_form_desc_ph')} value={note} onChange={e => setNote(e.target.value)} />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Fecha</label>
+                  <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t('date')}</label>
                   <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} />
                   {date && !date.startsWith(getCurrentMonth()) && (
                     <p style={{ fontSize: 12, color: '#D97706', marginTop: 4, fontWeight: 600 }}>
-                      ⚠️ Esta fecha es de otro mes — aparecerá en {date.slice(0,7)} no en el mes actual
+                      {t('txn_date_other_month', date.slice(0,7))}
                     </p>
                   )}
                 </div>
@@ -540,14 +530,14 @@ function TransactionsContent() {
               {saveError && <p style={{ color: '#EF4444', fontSize: 13, textAlign: 'center', marginBottom: 12, fontWeight: 600 }}>{saveError}</p>}
               <button form="txn-form" type="submit" disabled={saving} className="btn-primary"
                 style={{ background: type === 'income' ? '#059669' : '#EF4444', boxShadow: `0 4px 14px ${type === 'income' ? 'rgba(5,150,105,0.35)' : 'rgba(239,68,68,0.35)'}` }}>
-                {saving ? 'Guardando...' : editingTx ? 'Guardar cambios' : `Guardar ${type === 'income' ? 'ingreso' : 'gasto'} ⚡ +10 XP`}
+                {saving ? t('saving') : editingTx ? t('txn_save_changes') : (type === 'income' ? t('txn_save_income') : t('txn_save_expense'))}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {xpFlash && <div className="xp-float">⚡ +10 XP ¡Guardado!</div>}
+      {xpFlash && <div className="xp-float">{t('txn_xp_flash')}</div>}
       <BottomNav />
     </div>
   )

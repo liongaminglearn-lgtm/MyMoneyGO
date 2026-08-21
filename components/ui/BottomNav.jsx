@@ -2,17 +2,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, Sword, PieChart, Target, User } from 'lucide-react'
-
-const NAV_ITEMS = [
-  { href: '/dashboard', icon: Home,      label: 'Inicio' },
-  { href: '/reports',   icon: PieChart,  label: 'Reportes' },
-  { href: '/missions',  icon: Sword,     label: 'Misiones' },
-  { href: '/goals',     icon: Target,    label: 'Metas' },
-  { href: '/profile',   icon: User,      label: 'Perfil' },
-]
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const { t } = useLanguage()
+
+  const NAV_ITEMS = [
+    { href: '/dashboard', icon: Home,     label: t('nav_home') },
+    { href: '/reports',   icon: PieChart, label: t('nav_reports') },
+    { href: '/missions',  icon: Sword,    label: t('nav_missions') },
+    { href: '/goals',     icon: Target,   label: t('nav_goals') },
+    { href: '/profile',   icon: User,     label: t('nav_profile') },
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 safe-bottom z-50"
