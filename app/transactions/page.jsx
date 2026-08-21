@@ -155,12 +155,11 @@ function TransactionsContent() {
     setSaveError('')
 
     if (editingTx) {
-      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, subcategory: subcategory || null, note: note || null, date })
+      const { data, error } = await updateTransaction(editingTx.id, { type, amount: Number(amount), category, subcategory: subcategory || null, note: note || null, date }, user.id)
       if (error) { setSaveError(error.message || 'Error al guardar.'); setSaving(false); return }
-      if (data && data[0]) {
-        setTransactions(prev => prev.map(t => t.id === editingTx.id ? data[0] : t))
-        closeForm()
-      }
+      if (!data || !data[0]) { setSaveError('No se pudo actualizar la transacción.'); setSaving(false); return }
+      setTransactions(prev => prev.map(t => t.id === editingTx.id ? data[0] : t))
+      closeForm()
       setSaving(false)
       return
     }
@@ -193,7 +192,8 @@ function TransactionsContent() {
   }
 
   async function handleDelete(id) {
-    await deleteTransaction(id)
+    const { error } = await deleteTransaction(id, user.id)
+    if (error) return
     setTransactions(prev => prev.filter(t => t.id !== id))
   }
 
@@ -219,7 +219,7 @@ function TransactionsContent() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `mymoneygo-${currentMonth}.csv`
+    a.download = `mymoneygo-${selectedMonth}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -513,65 +513,6 @@ function TransactionsContent() {
                   </div>
                 )}
 
-                {/* Subcategoría */}
-                {allSubcats.length > 0 && (
-                  <div>
-                    <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 8 }}>Subcategoría (opcional)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {allSubcats.map(sc => {
-                        const isCustom = customSubcatList.includes(sc)
-                        const isSelected = subcategory === sc
-                        return (
-                          <div key={sc} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                            <button type="button" onClick={() => setSubcategory(isSelected ? '' : sc)}
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold transition-all"
-                              style={{
-                                background: isSelected ? `${selectedCatInfo?.color || '#059669'}18` : '#F3F4F6',
-                                border: `1.5px solid ${isSelected ? (selectedCatInfo?.color || '#059669') : '#E5E7EB'}`,
-                                color: isSelected ? (selectedCatInfo?.color || '#059669') : '#6B7280',
-                                paddingRight: isCustom ? 24 : undefined,
-                              }}>
-                              {sc}
-                            </button>
-                            {isCustom && (
-                              <button type="button"
-                                onClick={() => deleteCustomSubcat(sc)}
-                                style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', lineHeight: 1, color: '#9CA3AF', fontSize: 14, fontWeight: 700 }}>
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                      {showSubcatInput ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            placeholder="Nueva..."
-                            value={newSubcatInput}
-                            onChange={e => setNewSubcatInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSubcat())}
-                            className="rounded-full px-3 py-1.5 text-sm font-semibold"
-                            style={{ border: '1.5px solid #E5E7EB', outline: 'none', width: 110 }}
-                            autoFocus
-                          />
-                          <button type="button" onClick={addCustomSubcat}
-                            className="w-7 h-7 rounded-full flex items-center justify-center"
-                            style={{ background: '#D1FAE5', color: '#047857', fontWeight: 800, fontSize: 16 }}>✓</button>
-                          <button type="button" onClick={() => { setShowSubcatInput(false); setNewSubcatInput('') }}
-                            className="w-7 h-7 rounded-full flex items-center justify-center"
-                            style={{ background: '#FEE2E2', color: '#DC2626', fontWeight: 800, fontSize: 16 }}>×</button>
-                        </div>
-                      ) : (
-                        <button type="button" onClick={() => setShowSubcatInput(true)}
-                          className="px-3 py-1.5 rounded-full text-sm font-semibold"
-                          style={{ border: '1.5px dashed #D1D5DB', color: '#9CA3AF', background: 'transparent' }}>
-                          + Nueva
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <label style={{ fontSize: 13, color: '#6B7280', fontWeight: 600, display: 'block', marginBottom: 6 }}>Descripción (opcional)</label>

@@ -55,11 +55,14 @@ export default function BudgetPage() {
 
   async function handleSave() {
     setSaving(true)
-    const entries = Object.entries(draftBudgets).filter(([, v]) => Number(v) > 0)
-    await Promise.all(entries.map(([cat, amt]) => upsertBudget(userId, month, cat, Number(amt))))
-    setBudgets({ ...draftBudgets })
-    setEditing(false)
-    setSaving(false)
+    try {
+      const entries = Object.entries(draftBudgets).filter(([, v]) => Number(v) > 0)
+      await Promise.all(entries.map(([cat, amt]) => upsertBudget(userId, month, cat, Number(amt))))
+      setBudgets({ ...draftBudgets })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const totalBudgeted = Object.values(budgets).reduce((s, v) => s + Number(v), 0)

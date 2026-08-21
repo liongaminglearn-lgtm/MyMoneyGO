@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { getUser, getProfile, getTransactions } from '@/lib/supabase'
+import { getUser, getProfile, getTransactions, getBudgets } from '@/lib/supabase'
 import { formatCurrency, CATEGORIES, getCurrentMonth } from '@/lib/utils'
 import BottomNav from '@/components/ui/BottomNav'
-import { ChevronLeft, CheckCircle2, Lock } from 'lucide-react'
+import { ChevronLeft, CheckCircle2, Lock, Download, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
 
 const DAILY_MISSIONS = [
   { id: 'm1', icon: '💳', title: 'Registra un gasto hoy', desc: 'Anota cualquier gasto del día', xp: 15, coins: 5, type: 'daily' },
@@ -33,18 +33,23 @@ export default function MissionsPage() {
   const [completed, setCompleted] = useState({})
   const [xpFlash, setXpFlash] = useState('')
   const [transactions, setTransactions] = useState([])
+  const [budgetMap, setBudgetMap] = useState({})
   const [selectedCalDay, setSelectedCalDay] = useState(() => new Date().getDate())
 
   useEffect(() => {
     async function load() {
       const u = await getUser()
       if (!u) { router.push('/auth/login'); return }
-      const [{ data: prof }, { data: txns }] = await Promise.all([
+      const [{ data: prof }, { data: txns }, { data: bdgs }] = await Promise.all([
         getProfile(u.id),
-        getTransactions(u.id),
+        getTransactions(u.id, getCurrentMonth()),
+        getBudgets(u.id, getCurrentMonth()),
       ])
       setProfile(prof)
       setTransactions(txns || [])
+      const bm = {}
+      ;(bdgs || []).forEach(b => { bm[b.category] = b.amount })
+      setBudgetMap(bm)
       setLoading(false)
     }
     load()
@@ -74,9 +79,10 @@ export default function MissionsPage() {
   })
   const todaySpend = spendByDay[todayDay] || 0
 
-  const selectedDayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(selectedCalDay).padStart(2, '0')}`
+  const safeCalDay = Math.min(selectedCalDay, daysInCalMonth)
+  const selectedDayStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(safeCalDay).padStart(2, '0')}`
   const selectedDayTxns = transactions.filter(t => t.type === 'expense' && t.date === selectedDayStr)
-  const selectedDayTotal = spendByDay[selectedCalDay] || 0
+  const selectedDayTotal = spendByDay[safeCalDay] || 0
 
   function compactAmt(n) {
     if (n >= 10000) return `$${(n / 1000).toFixed(0)}k`
@@ -97,6 +103,94 @@ export default function MissionsPage() {
       id, amt,
       pct: totalMonthExp > 0 ? Math.round((amt / totalMonthExp) * 100) : 0,
     }))
+
+  // ── Report data ──────────────────────────────────────────────
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+  const balance = totalIncome - totalMonthExp
+  const MONTHS_FULL_ES = MONTHS_FULL
+
+  // Donut chart segments for expense categories
+  const donutRadius = 44, donutCx = 55, donutCy = 55, donutStroke = 18
+  const donutCirc = 2 * Math.PI * donutRadius
+  let donutOffset = 0
+  const donutSegs = topCats.map(item => {
+    const pct = totalMonthExp > 0 ? item.amt / totalMonthExp : 0
+    const seg = { ...item, dasharray: pct * donutCirc, start: donutOffset * donutCirc }
+    donutOffset += pct
+    return seg
+  })
+
+  // Budget vs actual rows
+  const budgetRows = Object.entries(budgetMap).map(([catId, limit]) => {
+    const cat = CATEGORIES.find(c => c.id === catId)
+    const spent = (catMap[catId] || 0)
+    const pct = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0
+    return { catId, cat, limit, spent, pct }
+  }).sort((a, b) => b.pct - a.pct)
+
+  function exportReport() {
+    const cur = getCurrentMonth()
+    const [y, m] = cur.split('-')
+    const monthName = `${MONTHS_FULL_ES[parseInt(m,10)-1]} ${y}`
+
+    const sections = []
+
+    // Section 1: Summary
+    sections.push(['RESUMEN DEL MES — ' + monthName])
+    sections.push(['Ingresos', totalIncome])
+    sections.push(['Gastos', totalMonthExp])
+    sections.push(['Balance', balance])
+    sections.push([])
+
+    // Section 2: Transactions
+    sections.push(['TRANSACCIONES'])
+    sections.push(['Fecha','Tipo','Categoría','Subcategoría','Monto','Descripción'])
+    transactions.forEach(t => {
+      const cat = CATEGORIES.find(c => c.id === t.category)
+      sections.push([
+        t.date,
+        t.type === 'income' ? 'Ingreso' : 'Gasto',
+        cat?.name || t.category,
+        t.subcategory || '',
+        t.amount,
+        t.note || '',
+      ])
+    })
+    sections.push([])
+
+    // Section 3: Budget vs Actual
+    sections.push(['PRESUPUESTO VS GASTO'])
+    sections.push(['Categoría','Presupuesto','Gastado','Diferencia','%'])
+    budgetRows.forEach(r => {
+      sections.push([
+        r.cat?.name || r.catId,
+        r.limit,
+        r.spent,
+        r.limit - r.spent,
+        r.pct,
+      ])
+    })
+    sections.push([])
+
+    // Section 4: Top categories
+    sections.push(['TOP CATEGORÍAS'])
+    sections.push(['Categoría','Monto','% del total'])
+    topCats.forEach(item => {
+      sections.push([item.cat?.name || item.id, item.amt, item.pct])
+    })
+
+    const csv = sections.map(row =>
+      row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n')
+
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `mymoneygo-reporte-${cur}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const missionGroups = { daily: DAILY_MISSIONS, weekly: WEEKLY_MISSIONS, special: SPECIAL_MISSIONS }
   const currentMissions = missionGroups[activeTab] || []
@@ -303,7 +397,7 @@ export default function MissionsPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                  {selectedCalDay === todayDay ? '📍 Hoy' : `${selectedCalDay} de ${MONTHS_FULL[calMonth]}`}
+                  {safeCalDay === todayDay ? '📍 Hoy' : `${safeCalDay} de ${MONTHS_FULL[calMonth]}`}
                 </p>
                 <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
                   {selectedDayTxns.length === 0 ? 'Sin gastos' : `${selectedDayTxns.length} ${selectedDayTxns.length === 1 ? 'gasto' : 'gastos'}`}
@@ -315,7 +409,7 @@ export default function MissionsPage() {
             </div>
             {selectedDayTxns.length === 0 ? (
               <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '8px 0' }}>
-                {selectedCalDay > todayDay ? 'Día futuro' : 'Sin gastos este día'}
+                {safeCalDay > todayDay ? 'Día futuro' : 'Sin gastos este día'}
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -387,6 +481,140 @@ export default function MissionsPage() {
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Reporte mensual ── */}
+      <div className="px-5 mt-5 mb-2">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>📋 Reporte del mes</p>
+          <button onClick={exportReport}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#059669', color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            <Download size={14} />
+            Descargar Excel
+          </button>
+        </div>
+
+        {/* Tarjetas resumen */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+          <div style={{ background: '#ECFDF5', borderRadius: 16, padding: '12px 10px', textAlign: 'center' }}>
+            <TrendingUp size={18} color="#059669" style={{ margin: '0 auto 4px' }} />
+            <p style={{ fontSize: 10, color: '#059669', fontWeight: 700, marginBottom: 2 }}>INGRESOS</p>
+            <p style={{ fontSize: 13, fontWeight: 900, color: '#047857' }}>{formatCurrency(totalIncome)}</p>
+          </div>
+          <div style={{ background: '#FEF2F2', borderRadius: 16, padding: '12px 10px', textAlign: 'center' }}>
+            <TrendingDown size={18} color="#DC2626" style={{ margin: '0 auto 4px' }} />
+            <p style={{ fontSize: 10, color: '#DC2626', fontWeight: 700, marginBottom: 2 }}>GASTOS</p>
+            <p style={{ fontSize: 13, fontWeight: 900, color: '#DC2626' }}>{formatCurrency(totalMonthExp)}</p>
+          </div>
+          <div style={{ background: balance >= 0 ? '#ECFDF5' : '#FEF2F2', borderRadius: 16, padding: '12px 10px', textAlign: 'center' }}>
+            <Wallet size={18} color={balance >= 0 ? '#059669' : '#DC2626'} style={{ margin: '0 auto 4px' }} />
+            <p style={{ fontSize: 10, color: balance >= 0 ? '#059669' : '#DC2626', fontWeight: 700, marginBottom: 2 }}>BALANCE</p>
+            <p style={{ fontSize: 13, fontWeight: 900, color: balance >= 0 ? '#047857' : '#DC2626' }}>{formatCurrency(Math.abs(balance))}{balance < 0 ? ' ⚠️' : ''}</p>
+          </div>
+        </div>
+
+        {/* Gráfica de donut — distribución de gastos */}
+        {topCats.length > 0 && (
+          <div className="card-lg" style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Distribución de gastos</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <svg viewBox="0 0 110 110" style={{ width: 110, height: 110, transform: 'rotate(-90deg)' }}>
+                  <circle cx={donutCx} cy={donutCy} r={donutRadius} fill="none" stroke="#F3F4F6" strokeWidth={donutStroke} />
+                  {donutSegs.map((s, i) => (
+                    <circle key={i} cx={donutCx} cy={donutCy} r={donutRadius}
+                      fill="none" stroke={s.cat?.color || '#9CA3AF'} strokeWidth={donutStroke}
+                      strokeDasharray={`${s.dasharray} ${donutCirc - s.dasharray}`}
+                      strokeDashoffset={-s.start} strokeLinecap="butt" />
+                  ))}
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <p style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 600 }}>TOTAL</p>
+                  <p style={{ fontSize: 12, fontWeight: 900, color: '#111827' }}>{formatCurrency(totalMonthExp)}</p>
+                </div>
+              </div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {donutSegs.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: s.cat?.color || '#9CA3AF', flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.cat?.icon} {s.cat?.name || s.id}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#111827' }}>{s.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Presupuesto vs Gasto */}
+        {budgetRows.length > 0 && (
+          <div className="card-lg" style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Presupuesto vs Gasto</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {budgetRows.map(r => (
+                <div key={r.catId}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>{r.cat?.icon || '📦'}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{r.cat?.name || r.catId}</span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: r.pct >= 100 ? '#DC2626' : r.pct >= 80 ? '#D97706' : '#059669' }}>
+                        {formatCurrency(r.spent)}
+                      </span>
+                      <span style={{ fontSize: 10, color: '#9CA3AF' }}> / {formatCurrency(r.limit)}</span>
+                    </div>
+                  </div>
+                  <div style={{ position: 'relative', height: 8, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, height: '100%',
+                      width: `${r.pct}%`,
+                      background: r.pct >= 100 ? '#EF4444' : r.pct >= 80 ? '#F97316' : '#059669',
+                      borderRadius: 99,
+                      transition: 'width 0.5s ease',
+                    }} />
+                  </div>
+                  <p style={{ fontSize: 10, color: r.pct >= 100 ? '#DC2626' : '#9CA3AF', marginTop: 3, textAlign: 'right' }}>
+                    {r.pct >= 100 ? `Excedido ${formatCurrency(r.spent - r.limit)}` : `Disponible ${formatCurrency(r.limit - r.spent)}`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gráfica de barras horizontales — ingresos vs gastos */}
+        <div className="card-lg" style={{ marginBottom: 6 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 14 }}>Ingresos vs Gastos</p>
+          {[
+            { label: 'Ingresos', value: totalIncome, color: '#059669', max: Math.max(totalIncome, totalMonthExp, 1) },
+            { label: 'Gastos', value: totalMonthExp, color: '#EF4444', max: Math.max(totalIncome, totalMonthExp, 1) },
+          ].map(bar => (
+            <div key={bar.label} style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{bar.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: bar.color }}>{formatCurrency(bar.value)}</span>
+              </div>
+              <div style={{ height: 10, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${bar.max > 0 ? Math.round((bar.value / bar.max) * 100) : 0}%`,
+                  background: bar.color,
+                  borderRadius: 99,
+                  transition: 'width 0.6s ease',
+                }} />
+              </div>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10, marginTop: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>Balance neto</span>
+            <span style={{ fontSize: 14, fontWeight: 900, color: balance >= 0 ? '#047857' : '#DC2626' }}>
+              {balance >= 0 ? '+' : ''}{formatCurrency(balance)}
+            </span>
+          </div>
         </div>
       </div>
 
